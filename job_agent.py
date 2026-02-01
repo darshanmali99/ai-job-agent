@@ -1,8 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 
-TOKEN = "PASTE_YOUR_TOKEN"
-CHAT_ID = "PASTE_YOUR_CHAT_ID"
+TOKEN = "8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY"
+CHAT_ID = "1474889968"
 
 def send_telegram(msg):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
