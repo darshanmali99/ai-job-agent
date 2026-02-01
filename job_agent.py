@@ -10,18 +10,28 @@ def send_telegram(msg):
 
 def scrape_internshala():
     url = "https://internshala.com/internships/data-analyst-internship/"
-    r = requests.get(url)
-    soup = BeautifulSoup(r.text, "html.parser")
+    headers = {"User-Agent": "Mozilla/5.0"}
+    response = requests.get(url, headers=headers)
 
+    soup = BeautifulSoup(response.text, "html.parser")
     jobs = []
-    for card in soup.find_all("div", class_="individual_internship"):
-        title = card.find("h3").text.strip()
-        company = card.find("h4").text.strip()
-        link = "https://internshala.com" + card.find("a")["href"]
 
-        jobs.append(f"{title}\n{company}\n{link}\n")
+    cards = soup.find_all("div", class_="individual_internship")
 
-    return jobs[:5]
+    for card in cards[:5]:
+        title_tag = card.find("h3")
+        company_tag = card.find("h4")
+        link_tag = card.find("a", href=True)
+
+        if title_tag and company_tag and link_tag:
+            title = title_tag.text.strip()
+            company = company_tag.text.strip()
+            link = "https://internshala.com" + link_tag["href"]
+
+            job_text = f"🔹 {title}\n🏢 {company}\n🔗 {link}\n"
+            jobs.append(job_text)
+
+    return jobs
 
 if __name__ == "__main__":
     jobs = scrape_internshala()
