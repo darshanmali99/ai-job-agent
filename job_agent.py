@@ -6,7 +6,7 @@ TOKEN = os.getenv("8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY")
 CHAT_ID = os.getenv("1474889968")
 
 def send_telegram(msg):
-    url = f"https://api.telegram.org/bot{8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY}/sendMessage"
+    url = f"https://api.telegram.org/bot8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY/sendMessage"
     data = {
         "chat_id":1474889968,
         "text": msg[:3000]
