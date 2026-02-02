@@ -8,18 +8,19 @@ from datetime import datetime
 import time
 
 # ============ CONFIG ============
-TOKEN = os.getenv("8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY")
-CHAT_ID = os.getenv("1474889968")
-TELEGRAM_API = f"https://api.telegram.org/bot8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY/sendMessage"
+# These will be loaded from GitHub Secrets automatically
+TOKEN = os.getenv("BOT_TOKEN")
+CHAT_ID = os.getenv("CHAT_ID")
+TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-# Level 2: Location preferences (India-focused)
+# Location preferences (India-focused)
 PREFERRED_LOCATIONS = [
     "remote", "work from home", "wfh",
     "india", "pune", "mumbai", "bangalore", "delhi", 
     "hyderabad", "chennai", "kolkata", "noida", "gurgaon"
 ]
 
-# Level 3: Keywords for filtering
+# Keywords for filtering
 INTERNSHIP_KEYWORDS = ["intern", "internship", "trainee", "fresher", "entry level", "entry-level"]
 STIPEND_KEYWORDS = ["stipend", "paid", "₹", "rs.", "rs ", "inr", "salary", "compensation"]
 
@@ -37,7 +38,6 @@ def load_history():
     try:
         with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # Ensure structure is correct
             if not isinstance(data, dict) or "sent_links" not in data:
                 return {"sent_links": [], "last_updated": None}
             return data
@@ -114,6 +114,8 @@ def send_telegram(msg):
     """Send message to Telegram with error handling"""
     if not TOKEN or not CHAT_ID:
         print("❌ Telegram credentials missing (BOT_TOKEN or CHAT_ID)")
+        print(f"   BOT_TOKEN present: {bool(TOKEN)}")
+        print(f"   CHAT_ID present: {bool(CHAT_ID)}")
         return False
     
     try:
@@ -121,7 +123,7 @@ def send_telegram(msg):
             TELEGRAM_API,
             data={
                 "chat_id": CHAT_ID, 
-                "text": msg[:4000],  # Telegram limit
+                "text": msg[:4000],
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True
             },
@@ -132,7 +134,8 @@ def send_telegram(msg):
             print("✅ Telegram message sent successfully")
             return True
         else:
-            print(f"❌ Telegram failed: {response.status_code} - {response.text}")
+            print(f"❌ Telegram failed: {response.status_code}")
+            print(f"   Response: {response.text}")
             return False
             
     except Exception as e:
@@ -169,7 +172,6 @@ def indeed_jobs():
                         "stipend": ""
                     })
             except Exception as e:
-                print(f"   ⚠️ Skipped one Indeed item: {e}")
                 continue
         
         print(f"   ✅ Indeed: {len(jobs)} jobs found")
@@ -186,7 +188,7 @@ def internshala_jobs():
         print(f"🔍 Fetching Internshala...")
         
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
         
         response = requests.get(url, headers=headers, timeout=15)
@@ -195,7 +197,6 @@ def internshala_jobs():
         soup = BeautifulSoup(response.text, "html.parser")
         jobs = []
         
-        # Multiple selector strategies (Internshala changes HTML frequently)
         containers = (
             soup.select(".internship_meta") or
             soup.select(".individual_internship") or
@@ -204,12 +205,10 @@ def internshala_jobs():
         
         for container in containers[:15]:
             try:
-                # Find title
                 title_elem = (
                     container.select_one(".job-internship-name") or
                     container.select_one(".profile h3") or
                     container.select_one("h3") or
-                    container.select_one("h4") or
                     container.find("a")
                 )
                 
@@ -217,12 +216,7 @@ def internshala_jobs():
                     continue
                 
                 title = title_elem.get_text(strip=True)
-                
-                # Find link
-                link_elem = (
-                    container.select_one("a[href*='/internship/detail/']") or
-                    container.find("a", href=True)
-                )
+                link_elem = container.select_one("a[href*='/internship/detail/']") or container.find("a", href=True)
                 
                 if not link_elem or not link_elem.get("href"):
                     continue
@@ -230,20 +224,10 @@ def internshala_jobs():
                 href = link_elem["href"]
                 link = "https://internshala.com" + href if href.startswith("/") else href
                 
-                # Extract location
-                location_elem = (
-                    container.select_one(".location_link") or
-                    container.select_one('[class*="location"]') or
-                    container.find(string=re.compile(r"location", re.I))
-                )
+                location_elem = container.select_one(".location_link")
                 location = location_elem.get_text(strip=True) if location_elem else ""
                 
-                # Extract stipend
-                stipend_elem = (
-                    container.select_one(".stipend") or
-                    container.select_one('[class*="stipend"]') or
-                    container.find(string=re.compile(r"stipend|₹", re.I))
-                )
+                stipend_elem = container.select_one(".stipend")
                 stipend = stipend_elem.get_text(strip=True) if stipend_elem else ""
                 
                 jobs.append({
@@ -256,7 +240,6 @@ def internshala_jobs():
                 })
                 
             except Exception as e:
-                print(f"   ⚠️ Skipped one Internshala item: {e}")
                 continue
         
         print(f"   ✅ Internshala: {len(jobs)} jobs found")
@@ -273,7 +256,7 @@ def linkedin_jobs():
         print(f"🔍 Fetching LinkedIn...")
         
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
         
         response = requests.get(url, headers=headers, timeout=15)
@@ -293,23 +276,17 @@ def linkedin_jobs():
                     continue
                 
                 title = title_elem.get_text(strip=True)
-                link = link_elem.get("href", "").split("?")[0]  # Remove tracking params
+                link = link_elem.get("href", "").split("?")[0]
                 
                 if not link:
                     continue
                 
-                # Level 5: Check for Easy Apply
                 easy_apply = bool(
                     card.select_one(".job-card-container__apply-method") or
-                    "easyApply" in card.get_text() or
-                    "Easy Apply" in card.get_text()
+                    "easyApply" in card.get_text()
                 )
                 
-                # Extract location
-                location_elem = (
-                    card.select_one(".job-card-container__metadata-item") or
-                    card.select_one('[class*="location"]')
-                )
+                location_elem = card.select_one(".job-card-container__metadata-item")
                 location = location_elem.get_text(strip=True) if location_elem else ""
                 
                 jobs.append({
@@ -323,7 +300,6 @@ def linkedin_jobs():
                 })
                 
             except Exception as e:
-                print(f"   ⚠️ Skipped one LinkedIn item: {e}")
                 continue
         
         print(f"   ✅ LinkedIn: {len(jobs)} jobs found")
@@ -340,7 +316,7 @@ def naukri_jobs():
         print(f"🔍 Fetching Naukri...")
         
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
         
         response = requests.get(url, headers=headers, timeout=15)
@@ -364,8 +340,7 @@ def naukri_jobs():
                 if not link or not link.startswith("http"):
                     continue
                 
-                # Extract location
-                location_elem = article.select_one(".location") or article.select_one('[class*="location"]')
+                location_elem = article.select_one(".location")
                 location = location_elem.get_text(strip=True) if location_elem else ""
                 
                 jobs.append({
@@ -378,7 +353,6 @@ def naukri_jobs():
                 })
                 
             except Exception as e:
-                print(f"   ⚠️ Skipped one Naukri item: {e}")
                 continue
         
         print(f"   ✅ Naukri: {len(jobs)} jobs found")
@@ -388,19 +362,17 @@ def naukri_jobs():
         print(f"   ❌ Naukri failed: {e}")
         return []
 
-# ============ LEVEL 2 & 3: SMART FILTERING ============
+# ============ FILTERING ============
 
 def is_da_role(title):
     """Filter for Data Analyst roles only"""
     title_lower = title.lower()
     
-    # Must contain at least one of these
     positive_keywords = [
         "data analyst", "business analyst", "analytics intern", 
         "data analytics", "bi analyst", "business intelligence"
     ]
     
-    # Exclude these (senior roles, other fields)
     negative_keywords = [
         "senior", "sr.", "lead", "manager", "director", "head",
         "engineer", "scientist", "developer", "architect",
@@ -413,28 +385,27 @@ def is_da_role(title):
     return has_positive and not has_negative
 
 def is_internship_level(job):
-    """Level 3: Check if internship or entry-level role"""
+    """Check if internship or entry-level role"""
     text = f"{job.get('title', '')} {job.get('description', '')}".lower()
     return any(kw in text for kw in INTERNSHIP_KEYWORDS)
 
 def has_location_match(job):
-    """Level 2: Check if location matches preferences"""
+    """Check if location matches preferences"""
     text = f"{job.get('title', '')} {job.get('description', '')} {job.get('location', '')}".lower()
     return any(loc in text for loc in PREFERRED_LOCATIONS)
 
 def check_stipend(job):
-    """Level 3: Check if stipend is mentioned"""
+    """Check if stipend is mentioned"""
     text = f"{job.get('description', '')} {job.get('stipend', '')}".lower()
     has_stipend = any(kw in text for kw in STIPEND_KEYWORDS)
     
-    # Also check if "unpaid" is mentioned (negative indicator)
     if "unpaid" in text:
         return False
     
     return has_stipend
 
 def enhance_job(job):
-    """Add metadata to job for better filtering and display"""
+    """Add metadata to job"""
     job['is_internship'] = is_internship_level(job)
     job['location_match'] = has_location_match(job)
     job['has_stipend'] = check_stipend(job)
@@ -447,35 +418,26 @@ def filter_jobs(jobs, history):
     filtered = []
     
     for job in jobs:
-        # Level 1: Skip if already sent
         if not is_new_job(job.get('link', ''), history):
             continue
         
-        # Base: Must be DA role
         if not is_da_role(job.get('title', '')):
             continue
         
-        # Level 3: Must be internship/entry-level
         if not is_internship_level(job):
             continue
         
-        # Level 2: Location filter (OPTIONAL - uncomment to enable)
-        # if not has_location_match(job):
-        #     continue
-        
-        # Enhance with metadata
         job = enhance_job(job)
         filtered.append(job)
     
     return filtered
 
 def dedupe_jobs(jobs):
-    """Remove duplicate jobs based on normalized title"""
+    """Remove duplicate jobs"""
     seen = set()
     unique = []
     
     for job in jobs:
-        # Normalize title for comparison (remove special chars, lowercase)
         normalized = re.sub(r'[^a-z0-9]', '', job.get("title", "").lower())
         
         if normalized and normalized not in seen:
@@ -484,7 +446,7 @@ def dedupe_jobs(jobs):
     
     return unique
 
-# ============ MAIN ORCHESTRATION ============
+# ============ MAIN ============
 
 def collect_all_jobs():
     """Collect jobs from all sources"""
@@ -494,7 +456,6 @@ def collect_all_jobs():
     
     all_jobs = []
     
-    # Collect from each source with delays to avoid rate limits
     all_jobs += indeed_jobs()
     time.sleep(2)
     
@@ -513,7 +474,7 @@ def collect_all_jobs():
     return all_jobs
 
 def format_telegram_message(jobs):
-    """Format jobs into beautiful Telegram message with all enhancements"""
+    """Format jobs for Telegram"""
     if not jobs:
         return (
             "⚠️ <b>No New Jobs Today</b>\n\n"
@@ -526,14 +487,9 @@ def format_telegram_message(jobs):
     msg += f"📅 {datetime.now().strftime('%d %b %Y, %I:%M %p')}\n"
     msg += f"{'─'*40}\n\n"
     
-    for i, job in enumerate(jobs[:15], 1):  # Limit to 15 to avoid message size issues
-        # Level 5: Easy Apply star
+    for i, job in enumerate(jobs[:15], 1):
         star = "⭐ " if job.get('easy_apply') else ""
-        
-        # Level 3: Stipend indicator
         stipend = "💰 " if job.get('has_stipend') else ""
-        
-        # Level 2: Location indicator
         location_icon = "📍 " if job.get('location_match') else ""
         
         msg += f"{i}. {star}{stipend}{location_icon}<b>{job['title']}</b>\n"
@@ -547,7 +503,6 @@ def format_telegram_message(jobs):
     if len(jobs) > 15:
         msg += f"<i>...and {len(jobs) - 15} more opportunities!</i>\n\n"
     
-    # Legend
     msg += f"\n{'─'*40}\n"
     msg += "💡 <b>Legend:</b>\n"
     msg += "⭐ Easy Apply • 💰 Stipend Mentioned • 📍 Preferred Location"
@@ -555,45 +510,35 @@ def format_telegram_message(jobs):
     return msg
 
 def main():
-    """Main execution flow"""
+    """Main execution"""
     try:
-        # Step 1: Initialize files
         init_csv()
         history = load_history()
         
         print(f"📚 Memory loaded: {len(history.get('sent_links', []))} jobs in history")
         
-        # Step 2: Collect jobs from all sources
         all_jobs = collect_all_jobs()
         
-        # Step 3: Filter jobs (includes Level 1 memory check)
         print(f"\n🔍 Filtering jobs...")
         filtered_jobs = filter_jobs(all_jobs, history)
         print(f"   ✅ After filtering: {len(filtered_jobs)} jobs")
         
-        # Step 4: Remove duplicates
         final_jobs = dedupe_jobs(filtered_jobs)
         print(f"   ✅ After deduplication: {len(final_jobs)} jobs")
         
-        # Step 5: Process final jobs
         if final_jobs:
-            # Level 4: Save to CSV dataset
             save_to_csv(final_jobs)
             
-            # Level 1: Update history
             for job in final_jobs:
                 mark_as_sent(job.get('link', ''), history)
             save_history(history)
             
-            # Send to Telegram
             message = format_telegram_message(final_jobs)
             send_telegram(message)
             
-            # Summary
             print(f"\n{'='*70}")
             print(f"✅ SUCCESS: Sent {len(final_jobs)} new jobs to Telegram")
             
-            # Show breakdown by source
             sources = {}
             for job in final_jobs:
                 source = job.get('source', 'Unknown')
@@ -606,12 +551,11 @@ def main():
             print(f"{'='*70}\n")
             
         else:
-            # No new jobs
             message = format_telegram_message([])
             send_telegram(message)
             
             print(f"\n{'='*70}")
-            print(f"ℹ️  No new jobs found (all were duplicates or filtered out)")
+            print(f"ℹ️  No new jobs found")
             print(f"{'='*70}\n")
         
     except Exception as e:
@@ -619,7 +563,6 @@ def main():
         print(f"❌ CRITICAL ERROR: {e}")
         print(f"{'='*70}\n")
         
-        # Send error notification to Telegram
         error_msg = (
             f"⚠️ <b>Job Agent Error</b>\n\n"
             f"The agent encountered an error:\n"
@@ -628,7 +571,7 @@ def main():
         )
         send_telegram(error_msg)
         
-        raise  # Re-raise to see full traceback in logs
+        raise
 
 if __name__ == "__main__":
     main()
