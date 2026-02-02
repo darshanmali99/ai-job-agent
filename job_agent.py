@@ -11,10 +11,17 @@ def send_telegram(msg):
     requests.post(url, data={"chat_id": 1474889968, "text": msg[:3000]})
 
 import feedparser
+import requests
 
 def scrape_jobs():
     url = "https://in.indeed.com/rss?q=data+analyst+intern&l=India"
-    feed = feedparser.parse(url)
+
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+
+    response = requests.get(url, headers=headers)
+    feed = feedparser.parse(response.text)
 
     jobs = []
 
