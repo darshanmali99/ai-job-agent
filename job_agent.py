@@ -8,21 +8,30 @@ from datetime import datetime
 import time
 
 # ============ CONFIG ============
-# These will be loaded from GitHub Secrets automatically
 TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
-# Location preferences (India-focused)
+# EXPANDED Location preferences
 PREFERRED_LOCATIONS = [
-    "remote", "work from home", "wfh",
-    "india", "pune", "mumbai", "bangalore", "delhi", 
-    "hyderabad", "chennai", "kolkata", "noida", "gurgaon"
+    "remote", "work from home", "wfh", "work-from-home", "anywhere",
+    "india", "pune", "mumbai", "bangalore", "bengaluru", "delhi", "ncr",
+    "hyderabad", "chennai", "kolkata", "noida", "gurgaon", "gurugram",
+    "ahmedabad", "jaipur", "kochi", "cochin", "chandigarh", "indore",
+    "lucknow", "bhopal", "nagpur", "surat", "coimbatore", "vadodara"
 ]
 
-# Keywords for filtering
-INTERNSHIP_KEYWORDS = ["intern", "internship", "trainee", "fresher", "entry level", "entry-level"]
-STIPEND_KEYWORDS = ["stipend", "paid", "₹", "rs.", "rs ", "inr", "salary", "compensation"]
+# EXPANDED Keywords - More inclusive
+INTERNSHIP_KEYWORDS = [
+    "intern", "internship", "trainee", "fresher", "entry level", 
+    "entry-level", "graduate", "junior", "associate", "apprentice",
+    "campus", "0-1 year", "0-2 year", "beginner"
+]
+
+STIPEND_KEYWORDS = [
+    "stipend", "paid", "₹", "rs.", "rs ", "inr", "salary", 
+    "compensation", "pay", "remuneration", "package", "ctc"
+]
 
 # File paths
 HISTORY_FILE = "jobs_history.json"
@@ -66,9 +75,9 @@ def mark_as_sent(link, history):
     
     history["sent_links"].append(link)
     
-    # Keep only last 1000 jobs to prevent file bloat
-    if len(history["sent_links"]) > 1000:
-        history["sent_links"] = history["sent_links"][-1000:]
+    # Keep only last 1500 jobs (increased from 1000)
+    if len(history["sent_links"]) > 1500:
+        history["sent_links"] = history["sent_links"][-1500:]
 
 # ============ LEVEL 4: CSV DATASET ============
 
@@ -113,9 +122,7 @@ def save_to_csv(jobs):
 def send_telegram(msg):
     """Send message to Telegram with error handling"""
     if not TOKEN or not CHAT_ID:
-        print("❌ Telegram credentials missing (BOT_TOKEN or CHAT_ID)")
-        print(f"   BOT_TOKEN present: {bool(TOKEN)}")
-        print(f"   CHAT_ID present: {bool(CHAT_ID)}")
+        print("❌ Telegram credentials missing")
         return False
     
     try:
@@ -135,7 +142,6 @@ def send_telegram(msg):
             return True
         else:
             print(f"❌ Telegram failed: {response.status_code}")
-            print(f"   Response: {response.text}")
             return False
             
     except Exception as e:
@@ -145,115 +151,270 @@ def send_telegram(msg):
 # ============ JOB SOURCES ============
 
 def indeed_jobs():
-    """Indeed RSS Feed - Most reliable source"""
-    try:
-        url = "https://in.indeed.com/rss?q=data+analyst+intern&l=India"
-        print(f"🔍 Fetching Indeed...")
-        
-        response = requests.get(url, timeout=15)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.content, "xml")
-        jobs = []
-        
-        for item in soup.find_all("item")[:15]:
-            try:
-                title = item.title.text.strip() if item.title else ""
-                link = item.link.text.strip() if item.link else ""
-                description = item.description.text if item.description else ""
-                
-                if title and link:
+    """Indeed RSS - Multiple search variations"""
+    jobs = []
+    
+    # Multiple search queries for more results
+    queries = [
+        "data+analyst+intern",
+        "business+analyst+intern",
+        "data+analytics+intern",
+        "junior+data+analyst"
+    ]
+    
+    for query in queries:
+        try:
+            url = f"https://in.indeed.com/rss?q={query}&l=India"
+            print(f"🔍 Fetching Indeed ({query.replace('+', ' ')})...")
+            
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.content, "xml")
+            
+            for item in soup.find_all("item")[:10]:
+                try:
+                    title = item.title.text.strip() if item.title else ""
+                    link = item.link.text.strip() if item.link else ""
+                    description = item.description.text if item.description else ""
+                    
+                    if title and link:
+                        jobs.append({
+                            "title": title,
+                            "link": link,
+                            "source": "Indeed",
+                            "description": description,
+                            "location": "",
+                            "stipend": ""
+                        })
+                except:
+                    continue
+            
+            time.sleep(1)  # Brief delay between queries
+            
+        except Exception as e:
+            print(f"   ⚠️ Indeed query failed: {e}")
+            continue
+    
+    print(f"   ✅ Indeed total: {len(jobs)} jobs found")
+    return jobs
+
+def internshala_jobs():
+    """Internshala - Multiple search pages"""
+    jobs = []
+    
+    # Multiple search URLs
+    urls = [
+        "https://internshala.com/internships/data-analyst-internship/",
+        "https://internshala.com/internships/business-analyst-internship/",
+        "https://internshala.com/internships/data-analytics-internship/"
+    ]
+    
+    for url in urls:
+        try:
+            print(f"🔍 Fetching Internshala...")
+            
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, "html.parser")
+            
+            containers = (
+                soup.select(".internship_meta") or
+                soup.select(".individual_internship") or
+                soup.find_all("div", class_=lambda x: x and "internship" in x.lower())
+            )
+            
+            for container in containers[:10]:
+                try:
+                    title_elem = (
+                        container.select_one(".job-internship-name") or
+                        container.select_one(".profile h3") or
+                        container.select_one("h3") or
+                        container.find("a")
+                    )
+                    
+                    if not title_elem:
+                        continue
+                    
+                    title = title_elem.get_text(strip=True)
+                    link_elem = container.select_one("a[href*='/internship/detail/']") or container.find("a", href=True)
+                    
+                    if not link_elem or not link_elem.get("href"):
+                        continue
+                    
+                    href = link_elem["href"]
+                    link = "https://internshala.com" + href if href.startswith("/") else href
+                    
+                    location_elem = container.select_one(".location_link")
+                    location = location_elem.get_text(strip=True) if location_elem else ""
+                    
+                    stipend_elem = container.select_one(".stipend")
+                    stipend = stipend_elem.get_text(strip=True) if stipend_elem else ""
+                    
                     jobs.append({
                         "title": title,
                         "link": link,
-                        "source": "Indeed",
-                        "description": description,
-                        "location": "",
-                        "stipend": ""
+                        "source": "Internshala",
+                        "description": f"{location} {stipend}",
+                        "location": location,
+                        "stipend": stipend
                     })
-            except Exception as e:
-                continue
-        
-        print(f"   ✅ Indeed: {len(jobs)} jobs found")
-        return jobs
-        
-    except Exception as e:
-        print(f"   ❌ Indeed failed: {e}")
-        return []
-
-def internshala_jobs():
-    """Internshala - India's top internship platform"""
-    try:
-        url = "https://internshala.com/internships/data-analyst-internship/"
-        print(f"🔍 Fetching Internshala...")
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, "html.parser")
-        jobs = []
-        
-        containers = (
-            soup.select(".internship_meta") or
-            soup.select(".individual_internship") or
-            soup.find_all("div", class_=lambda x: x and "internship" in x.lower())
-        )
-        
-        for container in containers[:15]:
-            try:
-                title_elem = (
-                    container.select_one(".job-internship-name") or
-                    container.select_one(".profile h3") or
-                    container.select_one("h3") or
-                    container.find("a")
-                )
-                
-                if not title_elem:
+                    
+                except:
                     continue
-                
-                title = title_elem.get_text(strip=True)
-                link_elem = container.select_one("a[href*='/internship/detail/']") or container.find("a", href=True)
-                
-                if not link_elem or not link_elem.get("href"):
-                    continue
-                
-                href = link_elem["href"]
-                link = "https://internshala.com" + href if href.startswith("/") else href
-                
-                location_elem = container.select_one(".location_link")
-                location = location_elem.get_text(strip=True) if location_elem else ""
-                
-                stipend_elem = container.select_one(".stipend")
-                stipend = stipend_elem.get_text(strip=True) if stipend_elem else ""
-                
-                jobs.append({
-                    "title": title,
-                    "link": link,
-                    "source": "Internshala",
-                    "description": f"{location} {stipend}",
-                    "location": location,
-                    "stipend": stipend
-                })
-                
-            except Exception as e:
-                continue
-        
-        print(f"   ✅ Internshala: {len(jobs)} jobs found")
-        return jobs
-        
-    except Exception as e:
-        print(f"   ❌ Internshala failed: {e}")
-        return []
+            
+            time.sleep(1)
+            
+        except Exception as e:
+            print(f"   ⚠️ Internshala failed: {e}")
+            continue
+    
+    print(f"   ✅ Internshala total: {len(jobs)} jobs found")
+    return jobs
 
 def linkedin_jobs():
-    """LinkedIn Jobs - Public search page"""
+    """LinkedIn Jobs - Multiple searches"""
+    jobs = []
+    
+    # Multiple search queries
+    queries = [
+        "data%20analyst%20intern",
+        "business%20analyst%20intern",
+        "data%20analytics%20intern",
+        "junior%20data%20analyst"
+    ]
+    
+    for query in queries:
+        try:
+            url = f"https://www.linkedin.com/jobs/search/?keywords={query}&location=India"
+            print(f"🔍 Fetching LinkedIn...")
+            
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, "html.parser")
+            job_cards = soup.select("div.base-card")
+            
+            for card in job_cards[:10]:
+                try:
+                    title_elem = card.select_one("h3")
+                    link_elem = card.select_one("a.base-card__full-link")
+                    
+                    if not title_elem or not link_elem:
+                        continue
+                    
+                    title = title_elem.get_text(strip=True)
+                    link = link_elem.get("href", "").split("?")[0]
+                    
+                    if not link:
+                        continue
+                    
+                    easy_apply = bool(
+                        card.select_one(".job-card-container__apply-method") or
+                        "easyApply" in card.get_text()
+                    )
+                    
+                    location_elem = card.select_one(".job-card-container__metadata-item")
+                    location = location_elem.get_text(strip=True) if location_elem else ""
+                    
+                    jobs.append({
+                        "title": title,
+                        "link": link,
+                        "source": "LinkedIn",
+                        "easy_apply": easy_apply,
+                        "location": location,
+                        "description": location,
+                        "stipend": ""
+                    })
+                    
+                except:
+                    continue
+            
+            time.sleep(1)
+            
+        except Exception as e:
+            print(f"   ⚠️ LinkedIn query failed: {e}")
+            continue
+    
+    print(f"   ✅ LinkedIn total: {len(jobs)} jobs found")
+    return jobs
+
+def naukri_jobs():
+    """Naukri - Multiple searches"""
+    jobs = []
+    
+    queries = [
+        "data-analyst-intern-jobs",
+        "business-analyst-intern-jobs",
+        "junior-data-analyst-jobs"
+    ]
+    
+    for query in queries:
+        try:
+            url = f"https://www.naukri.com/{query}"
+            print(f"🔍 Fetching Naukri...")
+            
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            
+            response = requests.get(url, headers=headers, timeout=15)
+            response.raise_for_status()
+            
+            soup = BeautifulSoup(response.text, "html.parser")
+            job_articles = soup.select("article.jobTuple") or soup.find_all("article")
+            
+            for article in job_articles[:10]:
+                try:
+                    title_elem = article.select_one("a.title") or article.select_one("a")
+                    
+                    if not title_elem:
+                        continue
+                    
+                    title = title_elem.get_text(strip=True)
+                    link = title_elem.get("href", "")
+                    
+                    if not link or not link.startswith("http"):
+                        continue
+                    
+                    location_elem = article.select_one(".location")
+                    location = location_elem.get_text(strip=True) if location_elem else ""
+                    
+                    jobs.append({
+                        "title": title,
+                        "link": link,
+                        "source": "Naukri",
+                        "location": location,
+                        "description": location,
+                        "stipend": ""
+                    })
+                    
+                except:
+                    continue
+            
+            time.sleep(1)
+            
+        except Exception as e:
+            print(f"   ⚠️ Naukri query failed: {e}")
+            continue
+    
+    print(f"   ✅ Naukri total: {len(jobs)} jobs found")
+    return jobs
+
+def instahyre_jobs():
+    """Instahyre - NEW SOURCE"""
     try:
-        url = "https://www.linkedin.com/jobs/search/?keywords=data%20analyst%20intern&location=India"
-        print(f"🔍 Fetching LinkedIn...")
+        url = "https://www.instahyre.com/search-jobs/?q=data%20analyst&experience=0-1"
+        print(f"🔍 Fetching Instahyre...")
         
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -265,118 +426,57 @@ def linkedin_jobs():
         soup = BeautifulSoup(response.text, "html.parser")
         jobs = []
         
-        job_cards = soup.select("div.base-card")
+        job_cards = soup.find_all("div", class_=lambda x: x and "opportunity-card" in str(x).lower())
         
         for card in job_cards[:15]:
             try:
-                title_elem = card.select_one("h3")
-                link_elem = card.select_one("a.base-card__full-link")
-                
-                if not title_elem or not link_elem:
-                    continue
-                
-                title = title_elem.get_text(strip=True)
-                link = link_elem.get("href", "").split("?")[0]
-                
-                if not link:
-                    continue
-                
-                easy_apply = bool(
-                    card.select_one(".job-card-container__apply-method") or
-                    "easyApply" in card.get_text()
-                )
-                
-                location_elem = card.select_one(".job-card-container__metadata-item")
-                location = location_elem.get_text(strip=True) if location_elem else ""
-                
-                jobs.append({
-                    "title": title,
-                    "link": link,
-                    "source": "LinkedIn",
-                    "easy_apply": easy_apply,
-                    "location": location,
-                    "description": location,
-                    "stipend": ""
-                })
-                
-            except Exception as e:
-                continue
-        
-        print(f"   ✅ LinkedIn: {len(jobs)} jobs found")
-        return jobs
-        
-    except Exception as e:
-        print(f"   ❌ LinkedIn failed: {e}")
-        return []
-
-def naukri_jobs():
-    """Naukri.com - Leading Indian job portal"""
-    try:
-        url = "https://www.naukri.com/data-analyst-intern-jobs"
-        print(f"🔍 Fetching Naukri...")
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-        
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-        
-        soup = BeautifulSoup(response.text, "html.parser")
-        jobs = []
-        
-        job_articles = soup.select("article.jobTuple") or soup.find_all("article")
-        
-        for article in job_articles[:15]:
-            try:
-                title_elem = article.select_one("a.title") or article.select_one("a")
-                
+                title_elem = card.find("a", href=lambda x: x and "/job/" in str(x))
                 if not title_elem:
                     continue
                 
                 title = title_elem.get_text(strip=True)
-                link = title_elem.get("href", "")
+                link = "https://www.instahyre.com" + title_elem.get("href", "")
                 
-                if not link or not link.startswith("http"):
-                    continue
-                
-                location_elem = article.select_one(".location")
-                location = location_elem.get_text(strip=True) if location_elem else ""
+                location_elem = card.find(string=re.compile("location", re.I))
+                location = location_elem.strip() if location_elem else ""
                 
                 jobs.append({
                     "title": title,
                     "link": link,
-                    "source": "Naukri",
+                    "source": "Instahyre",
                     "location": location,
                     "description": location,
                     "stipend": ""
                 })
                 
-            except Exception as e:
+            except:
                 continue
         
-        print(f"   ✅ Naukri: {len(jobs)} jobs found")
+        print(f"   ✅ Instahyre: {len(jobs)} jobs found")
         return jobs
         
     except Exception as e:
-        print(f"   ❌ Naukri failed: {e}")
+        print(f"   ❌ Instahyre failed: {e}")
         return []
 
-# ============ FILTERING ============
+# ============ RELAXED FILTERING ============
 
 def is_da_role(title):
-    """Filter for Data Analyst roles only"""
+    """RELAXED Filter for Data Analyst roles"""
     title_lower = title.lower()
     
+    # EXPANDED positive keywords
     positive_keywords = [
         "data analyst", "business analyst", "analytics intern", 
-        "data analytics", "bi analyst", "business intelligence"
+        "data analytics", "bi analyst", "business intelligence",
+        "data intern", "analytics", "analyst intern", "ba intern",
+        "junior analyst", "associate analyst", "analyst trainee"
     ]
     
+    # REDUCED negative keywords (only exclude clear senior roles)
     negative_keywords = [
-        "senior", "sr.", "lead", "manager", "director", "head",
-        "engineer", "scientist", "developer", "architect",
-        "sales", "marketing", "hr", "recruiter"
+        "senior", "sr.", "lead", "principal", "director", 
+        "head", "vp", "vice president", "chief"
     ]
     
     has_positive = any(kw in title_lower for kw in positive_keywords)
@@ -384,10 +484,17 @@ def is_da_role(title):
     
     return has_positive and not has_negative
 
-def is_internship_level(job):
-    """Check if internship or entry-level role"""
+def is_entry_level(job):
+    """RELAXED check - More inclusive"""
     text = f"{job.get('title', '')} {job.get('description', '')}".lower()
-    return any(kw in text for kw in INTERNSHIP_KEYWORDS)
+    
+    # Accept if it matches ANY entry-level keyword
+    is_entry = any(kw in text for kw in INTERNSHIP_KEYWORDS)
+    
+    # Or if it doesn't explicitly say "senior/experienced"
+    is_not_senior = not any(kw in text for kw in ["senior", "experienced", "5+ year", "3+ year"])
+    
+    return is_entry or is_not_senior
 
 def has_location_match(job):
     """Check if location matches preferences"""
@@ -406,7 +513,7 @@ def check_stipend(job):
 
 def enhance_job(job):
     """Add metadata to job"""
-    job['is_internship'] = is_internship_level(job)
+    job['is_entry_level'] = is_entry_level(job)
     job['location_match'] = has_location_match(job)
     job['has_stipend'] = check_stipend(job)
     job['easy_apply'] = job.get('easy_apply', False)
@@ -414,18 +521,23 @@ def enhance_job(job):
     return job
 
 def filter_jobs(jobs, history):
-    """Master filter applying all levels"""
+    """RELAXED Master filter"""
     filtered = []
     
     for job in jobs:
+        # Level 1: Skip if already sent
         if not is_new_job(job.get('link', ''), history):
             continue
         
+        # Must be DA role
         if not is_da_role(job.get('title', '')):
             continue
         
-        if not is_internship_level(job):
+        # RELAXED: Entry level check (more lenient)
+        if not is_entry_level(job):
             continue
+        
+        # NO location filter - accept all locations
         
         job = enhance_job(job)
         filtered.append(job)
@@ -449,13 +561,14 @@ def dedupe_jobs(jobs):
 # ============ MAIN ============
 
 def collect_all_jobs():
-    """Collect jobs from all sources"""
+    """Collect jobs from ALL sources"""
     print(f"\n{'='*70}")
     print(f"🚀 Job Collection Started: {datetime.now().strftime('%d %b %Y, %I:%M %p')}")
     print(f"{'='*70}\n")
     
     all_jobs = []
     
+    # Collect from all sources
     all_jobs += indeed_jobs()
     time.sleep(2)
     
@@ -466,6 +579,9 @@ def collect_all_jobs():
     time.sleep(2)
     
     all_jobs += naukri_jobs()
+    time.sleep(2)
+    
+    all_jobs += instahyre_jobs()
     
     print(f"\n{'='*70}")
     print(f"📊 Total jobs collected: {len(all_jobs)}")
@@ -478,7 +594,7 @@ def format_telegram_message(jobs):
     if not jobs:
         return (
             "⚠️ <b>No New Jobs Today</b>\n\n"
-            "All recent Data Analyst internship postings were already sent to you!\n\n"
+            "All recent Data Analyst opportunities were already sent!\n\n"
             "✅ Agent ran successfully.\n"
             f"🕐 {datetime.now().strftime('%d %b %Y, %I:%M %p')}"
         )
@@ -487,7 +603,8 @@ def format_telegram_message(jobs):
     msg += f"📅 {datetime.now().strftime('%d %b %Y, %I:%M %p')}\n"
     msg += f"{'─'*40}\n\n"
     
-    for i, job in enumerate(jobs[:15], 1):
+    # Show up to 20 jobs (increased from 15)
+    for i, job in enumerate(jobs[:20], 1):
         star = "⭐ " if job.get('easy_apply') else ""
         stipend = "💰 " if job.get('has_stipend') else ""
         location_icon = "📍 " if job.get('location_match') else ""
@@ -500,12 +617,12 @@ def format_telegram_message(jobs):
         
         msg += f"\n   🔗 {job['link']}\n\n"
     
-    if len(jobs) > 15:
-        msg += f"<i>...and {len(jobs) - 15} more opportunities!</i>\n\n"
+    if len(jobs) > 20:
+        msg += f"<i>...and {len(jobs) - 20} more opportunities!</i>\n\n"
     
     msg += f"\n{'─'*40}\n"
     msg += "💡 <b>Legend:</b>\n"
-    msg += "⭐ Easy Apply • 💰 Stipend Mentioned • 📍 Preferred Location"
+    msg += "⭐ Easy Apply • 💰 Stipend • 📍 Preferred Location"
     
     return msg
 
@@ -560,13 +677,12 @@ def main():
         
     except Exception as e:
         print(f"\n{'='*70}")
-        print(f"❌ CRITICAL ERROR: {e}")
+        print(f"❌ ERROR: {e}")
         print(f"{'='*70}\n")
         
         error_msg = (
             f"⚠️ <b>Job Agent Error</b>\n\n"
-            f"The agent encountered an error:\n"
-            f"<code>{str(e)[:200]}</code>\n\n"
+            f"Error: <code>{str(e)[:200]}</code>\n\n"
             f"🕐 {datetime.now().strftime('%d %b %Y, %I:%M %p')}"
         )
         send_telegram(error_msg)
