@@ -40,7 +40,11 @@ def scrape_internshala():
     return jobs
 
 
-if __name__ == "__main__":
-    jobs = scrape_internshala()
-    message = "🔥 Latest Data Analyst Internships:\n\n" + "\n".join(jobs)
-    send_telegram(message)
+def send_telegram(msg):
+    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+    data = {
+        "chat_id": CHAT_ID,
+        "text": msg[:4000]  # Telegram limit safety
+    }
+    r = requests.post(url, data=data)
+    print(r.text)
