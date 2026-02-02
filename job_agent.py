@@ -112,15 +112,15 @@ def save_to_csv(jobs):
 
 def send_telegram(msg):
     """Send message to Telegram with error handling"""
-    if not TOKEN or not 1474889968:
-        print("❌ Telegram credentials missing (8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY or 1474889968)")
+    if not TOKEN or not CHAT_ID:
+        print("❌ Telegram credentials missing (BOT_TOKEN or CHAT_ID)")
         return False
     
     try:
         response = requests.post(
             TELEGRAM_API,
             data={
-                "1474889968": 1474889968, 
+                "chat_id": CHAT_ID, 
                 "text": msg[:4000],  # Telegram limit
                 "parse_mode": "HTML",
                 "disable_web_page_preview": True
