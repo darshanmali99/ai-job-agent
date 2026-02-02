@@ -7,9 +7,8 @@ CHAT_ID = os.getenv("1474889968")
 
 def send_telegram(msg):
     url = f"https://api.telegram.org/bot8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY/sendMessage"
-    data = {
-        "chat_id":1474889968,
-        "text": msg[:3000]
+    requests.post(url, data={"chat_id": 1474889968, "text": msg[:3000]})
+
     }
     r = requests.post(url, data=data)
     print("TELEGRAM RESPONSE:", r.text)
@@ -22,7 +21,7 @@ def scrape_internshala():
 
     jobs = []
 
-    cards = soup.find_all("div", class_="container-fluid individual_internship")
+    cards = soup.find_all("div", class_="individual_internship")
 
     for card in cards:
         title = card.find("a", class_="view_detail_button")
@@ -33,7 +32,9 @@ def scrape_internshala():
             company_text = company.text.strip()
             link = "https://internshala.com" + title["href"]
 
-            jobs.append(f"🔹 {title_text}\n🏢 {company_text}\n🔗 {link}\n")
+            jobs.append(
+                f"🔹 {title_text}\n🏢 {company_text}\n🔗 {link}\n"
+            )
 
         if len(jobs) == 5:
             break
@@ -42,11 +43,11 @@ def scrape_internshala():
 
 
 if __name__ == "__main__":
-    send_telegram("HELLO FROM GITHUB AGENT")
-
     jobs = scrape_internshala()
-    print("JOBS FOUND:", len(jobs))
 
-    message = "TEST MESSAGE FROM AGENT"
+    if not jobs:
+        message = "⚠️ Scraper ran but found no jobs (site layout changed)."
+    else:
+        message = "🔥 Latest Data Analyst Internships:\n\n" + "\n".join(jobs)
 
     send_telegram(message)
