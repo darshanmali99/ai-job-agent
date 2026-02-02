@@ -26,6 +26,11 @@ def scrape_internshala():
         link_tag = card.select_one("a.job-title-href")
 
         if title_tag and company_tag and link_tag:
+    title = title_tag.text.strip()
+
+    if "data" not in title.lower():
+        continue
+
             title = title_tag.text.strip()
             company = company_tag.text.strip()
             link = "https://internshala.com" + link_tag["href"]
