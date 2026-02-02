@@ -18,14 +18,16 @@ def scrape_internshala():
 
     jobs = []
 
-    for card in soup.select(".individual_internship"):
-        title = card.select_one("h3")
-        company = card.select_one(".company_name")
-        link = card.select_one("a")
+    cards = soup.select("div.individual_internship")
+
+    for card in cards:
+        title = card.select_one("h3.heading_4_5.profile")
+        company = card.select_one("p.company_name")
+        link = card.select_one("a.view_detail_button")
 
         if title and company and link:
-            title_text = title.text.strip()
-            company_text = company.text.strip()
+            title_text = title.get_text(strip=True)
+            company_text = company.get_text(strip=True)
             link_text = "https://internshala.com" + link["href"]
 
             jobs.append(
