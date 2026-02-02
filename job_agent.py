@@ -5,10 +5,14 @@ from bs4 import BeautifulSoup
 TOKEN = os.getenv("8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY")
 CHAT_ID = os.getenv("1474889968")
 
-
 def send_telegram(msg):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    requests.post(url, data={"chat_id": CHAT_ID, "text": msg})
+    url = f"https://api.telegram.org/bot{8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY}/sendMessage"
+    data = {
+        "chat_id":1474889968,
+        "text": msg[:3000]
+    }
+    r = requests.post(url, data=data)
+    print("TELEGRAM RESPONSE:", r.text)
 
 def scrape_internshala():
     url = "https://internshala.com/internships/data-analyst-internship/"
@@ -38,11 +42,11 @@ def scrape_internshala():
 
 
 if __name__ == "__main__":
-    jobs = scrape_internshala()
+    send_telegram("HELLO FROM GITHUB AGENT")
 
-    if not jobs:
-        message = "⚠️ Scraper ran but found no jobs (site layout changed)."
-    else:
-        message = "🔥 Latest Data Analyst Internships:\n\n" + "\n".join(jobs)
+    jobs = scrape_internshala()
+    print("JOBS FOUND:", len(jobs))
+
+    message = "TEST MESSAGE FROM AGENT"
 
     send_telegram(message)
