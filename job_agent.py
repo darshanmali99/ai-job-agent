@@ -20,27 +20,27 @@ def scrape_internshala():
 
     cards = soup.select("div.internship_meta")
 
-    for card in cards:
-        title_tag = card.select_one("a.job-title-href")
-        company_tag = card.select_one("div.company_name")
-        link_tag = card.select_one("a.job-title-href")
+   for card in cards:
+    title_tag = card.select_one("a.job-title-href")
+    company_tag = card.select_one("div.company_name")
+    link_tag = card.select_one("a.job-title-href")
 
-        if title_tag and company_tag and link_tag:
-    title = title_tag.text.strip()
+    if title_tag and company_tag and link_tag:
+        title = title_tag.text.strip()
 
-    if "data" not in title.lower():
-        continue
+        # 🔥 Filter only Data roles
+        if "data" not in title.lower():
+            continue
 
-            title = title_tag.text.strip()
-            company = company_tag.text.strip()
-            link = "https://internshala.com" + link_tag["href"]
+        company = company_tag.text.strip()
+        link = "https://internshala.com" + link_tag["href"]
 
-            jobs.append(
-                f"🔹 {title}\n🏢 {company}\n🔗 {link}\n"
-            )
+        jobs.append(
+            f"🔹 {title}\n🏢 {company}\n🔗 {link}\n"
+        )
 
-        if len(jobs) == 5:
-            break
+    if len(jobs) == 5:
+        break
 
     return jobs
 
