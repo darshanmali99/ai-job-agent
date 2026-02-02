@@ -8,7 +8,7 @@ import time
 # ============ CONFIG ============
 TOKEN = os.getenv("8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY")
 CHAT_ID = os.getenv("1474889968")
-TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+TELEGRAM_API = f"https://api.telegram.org/bot8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY/sendMessage"
 
 # ============ TELEGRAM ============
 def send_telegram(msg):
