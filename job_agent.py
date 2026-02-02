@@ -13,26 +13,23 @@ def send_telegram(msg):
 def scrape_internshala():
     url = "https://internshala.com/internships/data-analyst-internship/"
     headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
+    r = requests.get(url, headers=headers)
+    soup = BeautifulSoup(r.text, "html.parser")
 
     jobs = []
 
-    cards = soup.select("div.individual_internship")
+    cards = soup.find_all("div", class_="container-fluid individual_internship")
 
     for card in cards:
-        title = card.select_one("h3.heading_4_5.profile")
-        company = card.select_one("p.company_name")
-        link = card.select_one("a.view_detail_button")
+        title = card.find("a", class_="view_detail_button")
+        company = card.find("p", class_="company_name")
 
-        if title and company and link:
-            title_text = title.get_text(strip=True)
-            company_text = company.get_text(strip=True)
-            link_text = "https://internshala.com" + link["href"]
+        if title and company:
+            title_text = title.text.strip()
+            company_text = company.text.strip()
+            link = "https://internshala.com" + title["href"]
 
-            jobs.append(
-                f"🔹 {title_text}\n🏢 {company_text}\n🔗 {link_text}\n"
-            )
+            jobs.append(f"🔹 {title_text}\n🏢 {company_text}\n🔗 {link}\n")
 
         if len(jobs) == 5:
             break
@@ -40,11 +37,12 @@ def scrape_internshala():
     return jobs
 
 
-def send_telegram(msg):
-    url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
-    data = {
-        "chat_id": CHAT_ID,
-        "text": msg[:4000]  # Telegram limit safety
-    }
-    r = requests.post(url, data=data)
-    print(r.text)
+if __name__ == "__main__":
+    jobs = scrape_internshala()
+
+    if not jobs:
+        message = "⚠️ Scraper ran but found no jobs (site layout changed)."
+    else:
+        message = "🔥 Latest Data Analyst Internships:\n\n" + "\n".join(jobs)
+
+    send_telegram(message)
