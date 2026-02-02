@@ -11,35 +11,36 @@ def send_telegram(msg):
     requests.post(url, data={"chat_id": 1474889968, "text": msg[:3000]})
 
 def scrape_internshala():
-    url = "https://internshala.com/internships/data-analyst-internship/"
+    url = "https://internshala.com/api/internships/search"
+
+    params = {
+        "profile": "data analyst",
+        "location": "",
+        "start_date": "",
+        "duration": "",
+        "stipend": "",
+        "page": 1
+    }
+
     headers = {"User-Agent": "Mozilla/5.0"}
-    r = requests.get(url, headers=headers)
-    soup = BeautifulSoup(r.text, "html.parser")
+
+    r = requests.get(url, params=params, headers=headers)
+    data = r.json()
 
     jobs = []
 
-    cards = soup.find_all("div", class_="individual_internship")
+    for item in data["internships"][:5]:
+        title = item["title"]
 
-    for card in cards:
-        title_tag = card.find("a", class_="view_detail_button")
-        company_tag = card.find("p", class_="company_name")
+        if "data" not in title.lower():
+            continue
 
-        if title_tag and company_tag:
-            title = title_tag.text.strip()
+        company = item["company_name"]
+        link = "https://internshala.com" + item["url"]
 
-            # Filter only data roles
-            if "data" not in title.lower():
-                continue
-
-            company = company_tag.text.strip()
-            link = "https://internshala.com" + title_tag["href"]
-
-            jobs.append(
-                f"🔹 {title}\n🏢 {company}\n🔗 {link}\n"
-            )
-
-        if len(jobs) == 5:
-            break
+        jobs.append(
+            f"🔹 {title}\n🏢 {company}\n🔗 {link}\n"
+        )
 
     return jobs
 
