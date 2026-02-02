@@ -10,7 +10,6 @@ def send_telegram(msg):
     url = f"https://api.telegram.org/bot8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY/sendMessage"
     requests.post(url, data={"chat_id": 1474889968, "text": msg[:3000]})
 
-
 def scrape_internshala():
     url = "https://internshala.com/internships/data-analyst-internship/"
     headers = {"User-Agent": "Mozilla/5.0"}
@@ -19,25 +18,27 @@ def scrape_internshala():
 
     jobs = []
 
-    cards = soup.find_all("div", class_="individual_internship")
+    cards = soup.select("div.internship_meta")
 
     for card in cards:
-        title = card.find("a", class_="view_detail_button")
-        company = card.find("p", class_="company_name")
+        title_tag = card.select_one("a.job-title-href")
+        company_tag = card.select_one("div.company_name")
+        link_tag = card.select_one("a.job-title-href")
 
-        if title and company:
-            title_text = title.text.strip()
-            company_text = company.text.strip()
-            link = "https://internshala.com" + title["href"]
+        if title_tag and company_tag and link_tag:
+            title = title_tag.text.strip()
+            company = company_tag.text.strip()
+            link = "https://internshala.com" + link_tag["href"]
 
             jobs.append(
-                f"🔹 {title_text}\n🏢 {company_text}\n🔗 {link}\n"
+                f"🔹 {title}\n🏢 {company}\n🔗 {link}\n"
             )
 
         if len(jobs) == 5:
             break
 
     return jobs
+
 
 
 if __name__ == "__main__":
