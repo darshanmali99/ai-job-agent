@@ -9,14 +9,15 @@ jobs:
   run:
     runs-on: ubuntu-latest
 
+    env:                       # ✅ VERY IMPORTANT — HERE
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      CHAT_ID: ${{ secrets.CHAT_ID }}
+
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
 
       - name: Install libraries
         run: pip install requests beautifulsoup4
 
-      - name: Run job agent
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHAT_ID: ${{ secrets.CHAT_ID }}
+      - name: Run script
         run: python job_agent.py
