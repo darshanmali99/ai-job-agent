@@ -9,8 +9,8 @@ import time
 
 # ============ CONFIG ============
 TOKEN = os.getenv("8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY")
-1474889968 = os.getenv("1474889968")
-TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+CHAT_ID = os.getenv("1474889968")
+TELEGRAM_API = f"https://api.telegram.org/bot8200332646:AAFwPeYI9t_YVCjkp37CaW8AMxzxSWIM9HY/sendMessage"
 
 # Level 2: Location preferences (India-focused)
 PREFERRED_LOCATIONS = [
