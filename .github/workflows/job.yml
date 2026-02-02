@@ -2,22 +2,38 @@ name: Job Agent
 
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * *'  # 8:30 AM IST
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   run:
     runs-on: ubuntu-latest
-
-    env:                       # ✅ VERY IMPORTANT — HERE
-      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-      CHAT_ID: ${{ secrets.CHAT_ID }}
-
+    
     steps:
-      - uses: actions/checkout@v2
-
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
       - name: Install libraries
-        run: pip install requests beautifulsoup4
-
+        run: |
+          pip install requests beautifulsoup4 lxml
+      
       - name: Run script
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
         run: python job_agent.py
+      
+      - name: Commit history files
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add jobs_history.json jobs_dataset.csv
+          git diff --quiet && git diff --staged --quiet || (git commit -m "📊 Update jobs [skip ci]" && git push)
