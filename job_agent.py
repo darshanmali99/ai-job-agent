@@ -124,8 +124,13 @@ def save_to_csv(jobs):
                     job.get('link', 'N/A'),
                     job.get('location', 'N/A'),
                     job.get('has_stipend', False),
-                    job.get('easy_apply', False)
+                    job.get('easy_apply', False),
+                    job.get('ai_score', None),
+                    True,
+                    'Sent'
                 ])
+
+
         print(f"💾 Saved {len(jobs)} jobs to CSV dataset")
     except Exception as e:
         print(f"⚠️ Error saving to CSV: {e}")
