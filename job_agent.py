@@ -12,6 +12,17 @@ TOKEN = os.getenv("BOT_TOKEN")
 CHAT_ID = os.getenv("CHAT_ID")
 TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
 
+# ============================================
+# OPTIONAL AI MATCHER (SAFE / NON-BREAKING)
+# ============================================
+try:
+    from ai_matcher import get_ai_matcher
+    AI_ENABLED = True
+    print("✅ AI matcher module loaded")
+except Exception as e:
+    AI_ENABLED = False
+    print(f"⚠️ AI matcher disabled: {e}")
+
 # EXPANDED Location preferences
 PREFERRED_LOCATIONS = [
     "remote", "work from home", "wfh", "work-from-home", "anywhere",
