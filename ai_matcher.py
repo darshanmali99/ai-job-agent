@@ -10,7 +10,73 @@ sample_jobs = [
         "link": "https://linkedin.com/job/123",
         "source": "LinkedIn",
         "description": "",  # LinkedIn often has empty description
-        "location": "",
+        "location": "",# ai_matcher.py
+# Simple, safe AI matcher (no circular imports)
+
+from typing import List, Dict
+
+
+class AIMatcher:
+    def __init__(self):
+        # Simple keyword-based skill profile
+        self.skills = [
+            "data analyst",
+            "data analysis",
+            "sql",
+            "excel",
+            "power bi",
+            "python",
+            "business analyst",
+            "intern"
+        ]
+
+    def score_job(self, job: Dict) -> float:
+        """
+        Score a single job based on title + description.
+        Returns score between 0.0 and 1.0
+        """
+
+        title = job.get("title", "").lower()
+        description = job.get("description", "").lower()
+
+        # ✅ LinkedIn fix: fallback if description is empty
+        text = description if description.strip() else title
+
+        if not text.strip():
+            return 0.0
+
+        matches = 0
+        for skill in self.skills:
+            if skill in text:
+                matches += 1
+
+        # Normalize score
+        score = matches / len(self.skills)
+
+        # Cap score at 1.0
+        return round(min(score, 1.0), 2)
+
+    def batch_score(self, jobs: List[Dict]) -> List[Dict]:
+        """
+        Score a list of jobs and attach ai_score to each
+        """
+
+        scored_jobs = []
+
+        for job in jobs:
+            score = self.score_job(job)
+            job["ai_score"] = score   # ✅ MUST be ai_score
+            scored_jobs.append(job)
+
+        return scored_jobs
+
+
+def get_ai_matcher():
+    """
+    Factory method used by job_agent.py and diagnostic script
+    """
+    return AIMatcher()
+
         "stipend": "",
         "easy_apply": False
     },
