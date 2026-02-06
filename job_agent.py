@@ -637,32 +637,31 @@ def format_telegram_message(jobs):
             msg += f" • {job['location']}"
         
         # ============================================
-# ADD HERE: AI SCORE DISPLAY
-# ============================================
-ai_score = job.get('ai_score')
-if ai_score is not None and ai_score > 0:
-    # Smart emoji based on score
-    if ai_score >= 0.70:
-        score_emoji = "🎯"
-    elif ai_score >= 0.50:
-        score_emoji = "✅"
-    else:
-        score_emoji = "⚡"
-    
-    msg += f"\n   {score_emoji} AI Match: {ai_score:.2f} ({int(ai_score*100)}%)"
-
-msg += f"\n   🔗 {job['link']}\n\n"
-
+        # AI SCORE DISPLAY (PROPERLY INDENTED)
+        # ============================================
+        ai_score = job.get('ai_score')
+        if ai_score is not None and ai_score > 0:
+            # Smart emoji based on score
+            if ai_score >= 0.70:
+                score_emoji = "🎯"
+            elif ai_score >= 0.50:
+                score_emoji = "✅"
+            else:
+                score_emoji = "⚡"
+            
+            msg += f"\n   {score_emoji} AI Match: {ai_score:.2f} ({int(ai_score*100)}%)"
+        
+        msg += f"\n   🔗 {job['link']}\n\n"
     
     if len(jobs) > 20:
         msg += f"<i>...and {len(jobs) - 20} more opportunities!</i>\n\n"
     
     msg += f"\n{'─'*40}\n"
     msg += "💡 <b>Legend:</b>\n"
-    msg += "⭐ Easy Apply • 💰 Stipend • 📍 Preferred Location"
+    msg += "⭐ Easy Apply • 💰 Stipend • 📍 Preferred Location\n"
+    msg += "🎯 Excellent Match (70%+) • ✅ Good Match (50%+) • ⚡ AI Scored"
     
     return msg
-
 def main():
     """Main execution"""
     try:
