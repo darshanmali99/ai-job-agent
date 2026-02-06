@@ -98,11 +98,14 @@ def init_csv():
         try:
             with open(CSV_FILE, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
+                # ============================================
+                # UPDATED: Added ai_score, keyword_pass, final_decision
+                # ============================================
                 writer.writerow([
-    'date', 'title', 'source', 'link', 
-    'location', 'stipend_mentioned', 'easy_apply',
-    'ai_score', 'keyword_pass', 'final_decision'
-])
+                    'date', 'title', 'source', 'link', 
+                    'location', 'stipend_mentioned', 'easy_apply',
+                    'ai_score', 'keyword_pass', 'final_decision'  # NEW FIELDS
+                ])
 
             print(f"📊 Created CSV dataset: {CSV_FILE}")
         except Exception as e:
