@@ -99,9 +99,11 @@ def init_csv():
             with open(CSV_FILE, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow([
-                    'date', 'title', 'source', 'link', 
-                    'location', 'stipend_mentioned', 'easy_apply'
-                ])
+    'date', 'title', 'source', 'link', 
+    'location', 'stipend_mentioned', 'easy_apply',
+    'ai_score', 'keyword_pass', 'final_decision'
+])
+
             print(f"📊 Created CSV dataset: {CSV_FILE}")
         except Exception as e:
             print(f"⚠️ Error creating CSV: {e}")
