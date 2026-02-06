@@ -1,128 +1,146 @@
 """
-AI-powered job-profile semantic matching layer.
-Lightweight keyword-based approach - no ML dependencies required.
-Works on any Python 3.8+ environment, CPU-only.
+AI Score Explainer - Debug tool to understand why jobs get certain scores
 """
 
-from typing import List, Dict
+from ai_matcher import get_ai_matcher
 
-
-class AIJobMatcher:
+def explain_score(job: dict):
     """
-    Keyword-based job relevance scorer.
-    Fallback implementation that works without sentence-transformers.
+    Explain in detail why a job received its AI score.
+    Useful for tuning the scoring algorithm.
     """
+    matcher = get_ai_matcher()
     
-    def __init__(self):
-        """Initialize with user skill profile"""
-        print("AI matcher initializing...")
-        
-        # User profile as weighted keywords
-        self.high_priority_skills = [
-            "data analyst", "data analysis", "business analyst",
-            "analytics", "sql", "python", "excel", "power bi", "tableau"
-        ]
-        
-        self.medium_priority_skills = [
-            "intern", "internship", "entry level", "junior", "fresher",
-            "data visualization", "reporting", "dashboard", "bi"
-        ]
-        
-        self.positive_keywords = [
-            "remote", "work from home", "paid", "stipend", "training",
-            "statistics", "data science", "machine learning", "pandas"
-        ]
-        
-        print("   AI matcher ready")
+    title = job.get("title", "").lower()
+    description = job.get("description", "").lower()
+    location = job.get("location", "").lower()
     
-    def score_job(self, job: Dict) -> float:
-        """
-        Compute relevance score for a single job.
-        
-        Args:
-            job: Dict with 'title' and 'description' keys
-        
-        Returns:
-            float: Relevance score [0.0, 1.0]
-        """
-        title = job.get("title", "").lower()
-        description = job.get("description", "").lower()
-        location = job.get("location", "").lower()
-        
-        # Combine all text (title weighted 2x)
-        text = f"{title} {title} {description} {location}"
-        
-        if not text.strip():
-            return 0.0
-        
-        score = 0.0
-        
-        # High priority matches (0.15 each, max 0.60)
-        high_matches = sum(1 for skill in self.high_priority_skills if skill in text)
-        score += min(high_matches * 0.15, 0.60)
-        
-        # Medium priority matches (0.10 each, max 0.30)
-        medium_matches = sum(1 for skill in self.medium_priority_skills if skill in text)
-        score += min(medium_matches * 0.10, 0.30)
-        
-        # Positive keywords (0.05 each, max 0.20)
-        positive_matches = sum(1 for kw in self.positive_keywords if kw in text)
-        score += min(positive_matches * 0.05, 0.20)
-        
-        # Normalize to [0.0, 1.0]
-        return round(min(score, 1.0), 4)
+    print("=" * 70)
+    print(f"JOB: {job.get('title', 'Unknown')}")
+    print("=" * 70)
     
-    def batch_score(self, jobs: List[Dict]) -> List[Dict]:
-        """
-        Score multiple jobs efficiently.
-        
-        Args:
-            jobs: List of job dicts
-        
-        Returns:
-            Same list with 'ai_score' added to each job
-        """
-        if not jobs:
-            return jobs
-        
-        print(f"AI scoring {len(jobs)} jobs...")
-        
-        scored_count = 0
-        high_score_count = 0
-        total_score = 0.0
-        
-        for job in jobs:
-            score = self.score_job(job)
-            job["ai_score"] = score
-            
-            if score > 0:
-                scored_count += 1
-                total_score += score
-            
-            if score >= 0.50:
-                high_score_count += 1
-        
-        avg_score = total_score / scored_count if scored_count > 0 else 0.0
-        
-        print(f"   Scored: {scored_count}/{len(jobs)} jobs")
-        print(f"   High relevance (>=0.50): {high_score_count} jobs")
-        print(f"   Average score: {avg_score:.3f}")
-        
-        return jobs
+    # Show inputs
+    print(f"\nTitle: {title}")
+    print(f"Description: {description}")
+    print(f"Location: {location}")
+    
+    # Score breakdown
+    print("\n" + "-" * 70)
+    print("SCORING BREAKDOWN:")
+    print("-" * 70)
+    
+    score = 0.0
+    
+    # Title analysis
+    title_text = f"{title} {title} {title} {title}"
+    full_text = f"{title_text} {description} {location}"
+    
+    # High priority in title
+    title_high = [skill for skill in matcher.high_priority_skills if skill in title]
+    title_high_score = min(len(title_high) * 0.20, 0.80)
+    score += title_high_score
+    print(f"\n1. High Priority Skills in Title (+0.20 each, max 0.80):")
+    if title_high:
+        for skill in title_high:
+            print(f"   ✓ {skill}")
+        print(f"   → Score: +{title_high_score:.2f}")
+    else:
+        print(f"   (none found)")
+        print(f"   → Score: +0.00")
+    
+    # High priority in full text
+    text_high = [skill for skill in matcher.high_priority_skills if skill in full_text]
+    text_high_score = min(len(text_high) * 0.10, 0.40)
+    score += text_high_score
+    print(f"\n2. High Priority Skills in Full Text (+0.10 each, max 0.40):")
+    if text_high:
+        for skill in text_high:
+            print(f"   ✓ {skill}")
+        print(f"   → Score: +{text_high_score:.2f}")
+    else:
+        print(f"   (none found)")
+        print(f"   → Score: +0.00")
+    
+    # Medium priority
+    medium = [skill for skill in matcher.medium_priority_skills if skill in full_text]
+    medium_score = min(len(medium) * 0.08, 0.30)
+    score += medium_score
+    print(f"\n3. Medium Priority Skills (+0.08 each, max 0.30):")
+    if medium:
+        for skill in medium:
+            print(f"   ✓ {skill}")
+        print(f"   → Score: +{medium_score:.2f}")
+    else:
+        print(f"   (none found)")
+        print(f"   → Score: +0.00")
+    
+    # Positive keywords
+    positive = [kw for kw in matcher.positive_keywords if kw in full_text]
+    positive_score = min(len(positive) * 0.05, 0.15)
+    score += positive_score
+    print(f"\n4. Positive Keywords (+0.05 each, max 0.15):")
+    if positive:
+        for kw in positive:
+            print(f"   ✓ {kw}")
+        print(f"   → Score: +{positive_score:.2f}")
+    else:
+        print(f"   (none found)")
+        print(f"   → Score: +0.00")
+    
+    # Bonus
+    bonus_keywords = ["intern", "internship", "entry level", "junior"]
+    has_bonus = any(kw in title for kw in bonus_keywords)
+    bonus_score = 0.10 if has_bonus else 0.0
+    score += bonus_score
+    print(f"\n5. Entry-Level Bonus (+0.10):")
+    if has_bonus:
+        matched = [kw for kw in bonus_keywords if kw in title]
+        print(f"   ✓ Found: {', '.join(matched)}")
+        print(f"   → Score: +{bonus_score:.2f}")
+    else:
+        print(f"   (not entry-level)")
+        print(f"   → Score: +0.00")
+    
+    # Final score
+    final_score = round(min(score, 1.0), 4)
+    
+    print("\n" + "=" * 70)
+    print(f"FINAL AI SCORE: {final_score} ({int(final_score*100)}%)")
+    print("=" * 70)
+    
+    # Interpretation
+    if final_score >= 0.70:
+        print("\n🎯 EXCELLENT MATCH - Highly relevant to your profile")
+    elif final_score >= 0.50:
+        print("\n✅ GOOD MATCH - Relevant opportunity worth applying to")
+    elif final_score > 0:
+        print("\n⚡ SCORED - Some relevance, review carefully")
+    else:
+        print("\n❌ NO MATCH - Not relevant to your profile")
+    
+    print()
 
 
-# ============================================
-# SINGLETON INSTANCE
-# ============================================
-_matcher_instance = None
-
-
-def get_ai_matcher() -> AIJobMatcher:
-    """
-    Get or create AI matcher singleton.
-    Used by job_agent.py
-    """
-    global _matcher_instance
-    if _matcher_instance is None:
-        _matcher_instance = AIJobMatcher()
-    return _matcher_instance
+if __name__ == "__main__":
+    # Test with sample jobs
+    test_jobs = [
+        {
+            "title": "Junior Data Analyst",
+            "description": "",
+            "location": ""
+        },
+        {
+            "title": "Data Analyst Intern (Excel, SQL, Power BI)",
+            "description": "Entry-level opportunity",
+            "location": "Remote"
+        },
+        {
+            "title": "Business Analyst Intern",
+            "description": "Remote opportunity for entry-level analyst",
+            "location": "Remote"
+        }
+    ]
+    
+    for job in test_jobs:
+        explain_score(job)
+        print("\n" * 2)
