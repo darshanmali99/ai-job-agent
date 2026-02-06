@@ -98,15 +98,11 @@ def init_csv():
         try:
             with open(CSV_FILE, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                # ============================================
-                # UPDATED: Added ai_score, keyword_pass, final_decision
-                # ============================================
                 writer.writerow([
                     'date', 'title', 'source', 'link', 
                     'location', 'stipend_mentioned', 'easy_apply',
-                    'ai_score', 'keyword_pass', 'final_decision'  # NEW FIELDS
+                    'ai_score', 'keyword_pass', 'final_decision'
                 ])
-
             print(f"📊 Created CSV dataset: {CSV_FILE}")
         except Exception as e:
             print(f"⚠️ Error creating CSV: {e}")
@@ -132,8 +128,6 @@ def save_to_csv(jobs):
                     True,
                     'Sent'
                 ])
-
-
         print(f"💾 Saved {len(jobs)} jobs to CSV dataset")
     except Exception as e:
         print(f"⚠️ Error saving to CSV: {e}")
@@ -175,7 +169,6 @@ def indeed_jobs():
     """Indeed RSS - Multiple search variations"""
     jobs = []
     
-    # Multiple search queries for more results
     queries = [
         "data+analyst+intern",
         "business+analyst+intern",
@@ -211,7 +204,7 @@ def indeed_jobs():
                 except:
                     continue
             
-            time.sleep(1)  # Brief delay between queries
+            time.sleep(1)
             
         except Exception as e:
             print(f"   ⚠️ Indeed query failed: {e}")
@@ -224,7 +217,6 @@ def internshala_jobs():
     """Internshala - Multiple search pages"""
     jobs = []
     
-    # Multiple search URLs
     urls = [
         "https://internshala.com/internships/data-analyst-internship/",
         "https://internshala.com/internships/business-analyst-internship/",
@@ -302,7 +294,6 @@ def linkedin_jobs():
     """LinkedIn Jobs - Multiple searches"""
     jobs = []
     
-    # Multiple search queries
     queries = [
         "data%20analyst%20intern",
         "business%20analyst%20intern",
@@ -486,7 +477,6 @@ def is_da_role(title):
     """RELAXED Filter for Data Analyst roles"""
     title_lower = title.lower()
     
-    # EXPANDED positive keywords
     positive_keywords = [
         "data analyst", "business analyst", "analytics intern", 
         "data analytics", "bi analyst", "business intelligence",
@@ -494,7 +484,6 @@ def is_da_role(title):
         "junior analyst", "associate analyst", "analyst trainee"
     ]
     
-    # REDUCED negative keywords (only exclude clear senior roles)
     negative_keywords = [
         "senior", "sr.", "lead", "principal", "director", 
         "head", "vp", "vice president", "chief"
@@ -509,10 +498,7 @@ def is_entry_level(job):
     """RELAXED check - More inclusive"""
     text = f"{job.get('title', '')} {job.get('description', '')}".lower()
     
-    # Accept if it matches ANY entry-level keyword
     is_entry = any(kw in text for kw in INTERNSHIP_KEYWORDS)
-    
-    # Or if it doesn't explicitly say "senior/experienced"
     is_not_senior = not any(kw in text for kw in ["senior", "experienced", "5+ year", "3+ year"])
     
     return is_entry or is_not_senior
@@ -546,19 +532,14 @@ def filter_jobs(jobs, history):
     filtered = []
     
     for job in jobs:
-        # Level 1: Skip if already sent
         if not is_new_job(job.get('link', ''), history):
             continue
         
-        # Must be DA role
         if not is_da_role(job.get('title', '')):
             continue
         
-        # RELAXED: Entry level check (more lenient)
         if not is_entry_level(job):
             continue
-        
-        # NO location filter - accept all locations
         
         job = enhance_job(job)
         filtered.append(job)
@@ -589,7 +570,6 @@ def collect_all_jobs():
     
     all_jobs = []
     
-    # Collect from all sources
     all_jobs += indeed_jobs()
     time.sleep(2)
     
@@ -624,7 +604,6 @@ def format_telegram_message(jobs):
     msg += f"📅 {datetime.now().strftime('%d %b %Y, %I:%M %p')}\n"
     msg += f"{'─'*40}\n\n"
     
-    # Show up to 20 jobs (increased from 15)
     for i, job in enumerate(jobs[:20], 1):
         star = "⭐ " if job.get('easy_apply') else ""
         stipend = "💰 " if job.get('has_stipend') else ""
@@ -636,12 +615,8 @@ def format_telegram_message(jobs):
         if job.get('location'):
             msg += f" • {job['location']}"
         
-        # ============================================
-        # AI SCORE DISPLAY (PROPERLY INDENTED)
-        # ============================================
         ai_score = job.get('ai_score')
         if ai_score is not None and ai_score > 0:
-            # Smart emoji based on score
             if ai_score >= 0.70:
                 score_emoji = "🎯"
             elif ai_score >= 0.50:
@@ -662,6 +637,7 @@ def format_telegram_message(jobs):
     msg += "🎯 Excellent Match (70%+) • ✅ Good Match (50%+) • ⚡ AI Scored"
     
     return msg
+
 def main():
     """Main execution"""
     try:
@@ -678,25 +654,20 @@ def main():
         
         final_jobs = dedupe_jobs(filtered_jobs)
         print(f"   ✅ After deduplication: {len(final_jobs)} jobs")
-        # ============================================
-# ADD HERE: AI SCORING LAYER (PHASE 1)
-# ============================================
-if AI_ENABLED and final_jobs:
-    try:
-        print(f"\n{'='*70}")
-        matcher = get_ai_matcher()
-        final_jobs = matcher.batch_score(final_jobs)
-        print(f"{'='*70}")
-    except Exception as e:
-        print(f"⚠️ AI scoring failed (continuing without scores): {e}")
-        # Add None scores to prevent errors
-        for job in final_jobs:
-            job['ai_score'] = None
-else:
-    # No AI enabled - add None scores
-    for job in final_jobs:
-        job['ai_score'] = None
-
+        
+        if AI_ENABLED and final_jobs:
+            try:
+                print(f"\n{'='*70}")
+                matcher = get_ai_matcher()
+                final_jobs = matcher.batch_score(final_jobs)
+                print(f"{'='*70}")
+            except Exception as e:
+                print(f"⚠️ AI scoring failed (continuing without scores): {e}")
+                for job in final_jobs:
+                    job['ai_score'] = None
+        else:
+            for job in final_jobs:
+                job['ai_score'] = None
         
         if final_jobs:
             save_to_csv(final_jobs)
