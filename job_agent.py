@@ -636,7 +636,23 @@ def format_telegram_message(jobs):
         if job.get('location'):
             msg += f" • {job['location']}"
         
-        msg += f"\n   🔗 {job['link']}\n\n"
+        # ============================================
+# ADD HERE: AI SCORE DISPLAY
+# ============================================
+ai_score = job.get('ai_score')
+if ai_score is not None and ai_score > 0:
+    # Smart emoji based on score
+    if ai_score >= 0.70:
+        score_emoji = "🎯"
+    elif ai_score >= 0.50:
+        score_emoji = "✅"
+    else:
+        score_emoji = "⚡"
+    
+    msg += f"\n   {score_emoji} AI Match: {ai_score:.2f} ({int(ai_score*100)}%)"
+
+msg += f"\n   🔗 {job['link']}\n\n"
+
     
     if len(jobs) > 20:
         msg += f"<i>...and {len(jobs) - 20} more opportunities!</i>\n\n"
@@ -663,6 +679,25 @@ def main():
         
         final_jobs = dedupe_jobs(filtered_jobs)
         print(f"   ✅ After deduplication: {len(final_jobs)} jobs")
+        # ============================================
+# ADD HERE: AI SCORING LAYER (PHASE 1)
+# ============================================
+if AI_ENABLED and final_jobs:
+    try:
+        print(f"\n{'='*70}")
+        matcher = get_ai_matcher()
+        final_jobs = matcher.batch_score(final_jobs)
+        print(f"{'='*70}")
+    except Exception as e:
+        print(f"⚠️ AI scoring failed (continuing without scores): {e}")
+        # Add None scores to prevent errors
+        for job in final_jobs:
+            job['ai_score'] = None
+else:
+    # No AI enabled - add None scores
+    for job in final_jobs:
+        job['ai_score'] = None
+
         
         if final_jobs:
             save_to_csv(final_jobs)
