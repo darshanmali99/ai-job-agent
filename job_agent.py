@@ -291,7 +291,7 @@ def internshala_jobs():
     return jobs
 
 def linkedin_jobs():
-    """LinkedIn Jobs - Multiple searches"""
+    """LinkedIn Jobs - Multiple searches with enhanced data extraction"""
     jobs = []
     
     queries = [
@@ -330,13 +330,27 @@ def linkedin_jobs():
                     if not link:
                         continue
                     
+                    # Enhanced: Extract company name
+                    company_elem = card.select_one("h4.base-search-card__subtitle")
+                    company = company_elem.get_text(strip=True) if company_elem else ""
+                    
+                    # Enhanced: Extract job snippet/preview text
+                    snippet_elem = card.select_one(".base-search-card__snippet")
+                    snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
+                    
+                    # Check for easy apply
                     easy_apply = bool(
                         card.select_one(".job-card-container__apply-method") or
                         "easyApply" in card.get_text()
                     )
                     
+                    # Extract location
                     location_elem = card.select_one(".job-card-container__metadata-item")
                     location = location_elem.get_text(strip=True) if location_elem else ""
+                    
+                    # Enhanced description: combine company + location + snippet
+                    description_parts = [p for p in [company, location, snippet] if p]
+                    description = " • ".join(description_parts)
                     
                     jobs.append({
                         "title": title,
@@ -344,7 +358,7 @@ def linkedin_jobs():
                         "source": "LinkedIn",
                         "easy_apply": easy_apply,
                         "location": location,
-                        "description": location,
+                        "description": description,  # Enhanced with more context
                         "stipend": ""
                     })
                     
@@ -616,13 +630,18 @@ def format_telegram_message(jobs):
             msg += f" • {job['location']}"
         
         ai_score = job.get('ai_score')
-        if ai_score is not None and ai_score > 0:
+        
+        # Show AI score if available (including low scores)
+        if ai_score is not None:
+            # Smart emoji based on score
             if ai_score >= 0.70:
                 score_emoji = "🎯"
             elif ai_score >= 0.50:
                 score_emoji = "✅"
-            else:
+            elif ai_score >= 0.20:
                 score_emoji = "⚡"
+            else:
+                score_emoji = "🔍"  # Very low score
             
             msg += f"\n   {score_emoji} AI Match: {ai_score:.2f} ({int(ai_score*100)}%)"
         
@@ -634,7 +653,7 @@ def format_telegram_message(jobs):
     msg += f"\n{'─'*40}\n"
     msg += "💡 <b>Legend:</b>\n"
     msg += "⭐ Easy Apply • 💰 Stipend • 📍 Preferred Location\n"
-    msg += "🎯 Excellent Match (70%+) • ✅ Good Match (50%+) • ⚡ AI Scored"
+    msg += "🎯 Excellent Match (70%+) • ✅ Good Match (50%+) • ⚡ AI Scored • 🔍 Low Score"
     
     return msg
 
@@ -655,17 +674,36 @@ def main():
         final_jobs = dedupe_jobs(filtered_jobs)
         print(f"   ✅ After deduplication: {len(final_jobs)} jobs")
         
+        # ============================================
+        # AI SCORING WITH DETAILED DIAGNOSTICS
+        # ============================================
         if AI_ENABLED and final_jobs:
             try:
                 print(f"\n{'='*70}")
+                print(f"🤖 AI_ENABLED = True, attempting to load matcher...")
                 matcher = get_ai_matcher()
+                print(f"🤖 Matcher loaded successfully, scoring jobs...")
                 final_jobs = matcher.batch_score(final_jobs)
+                
+                # Diagnostic: Check if scores were actually added
+                scored_jobs = [j for j in final_jobs if j.get('ai_score') is not None and j.get('ai_score') > 0]
+                print(f"🤖 Scored {len(scored_jobs)}/{len(final_jobs)} jobs successfully")
+                
+                if scored_jobs:
+                    avg_score = sum(j['ai_score'] for j in scored_jobs) / len(scored_jobs)
+                    print(f"🤖 Average AI score: {avg_score:.3f}")
+                else:
+                    print(f"⚠️ WARNING: All AI scores are 0 or None!")
+                
                 print(f"{'='*70}")
             except Exception as e:
                 print(f"⚠️ AI scoring failed (continuing without scores): {e}")
+                import traceback
+                traceback.print_exc()
                 for job in final_jobs:
                     job['ai_score'] = None
         else:
+            print(f"⚠️ AI scoring skipped: AI_ENABLED={AI_ENABLED}, final_jobs count={len(final_jobs) if final_jobs else 0}")
             for job in final_jobs:
                 job['ai_score'] = None
         
