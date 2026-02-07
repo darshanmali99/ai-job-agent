@@ -23,6 +23,17 @@ except Exception as e:
     AI_ENABLED = False
     print(f"⚠️ AI matcher disabled: {e}")
 
+# ============================================
+# OPTIONAL HYBRID SCORER (SAFE / NON-BREAKING)
+# ============================================
+try:
+    from hybrid_scorer import add_hybrid_scores_to_jobs
+    HYBRID_ENABLED = True
+    print("✅ Hybrid scorer module loaded")
+except Exception as e:
+    HYBRID_ENABLED = False
+    print(f"⚠️ Hybrid scorer disabled: {e}")
+
 # EXPANDED Location preferences
 PREFERRED_LOCATIONS = [
     "remote", "work from home", "wfh", "work-from-home", "anywhere",
@@ -101,7 +112,7 @@ def init_csv():
                 writer.writerow([
                     'date', 'title', 'source', 'link', 
                     'location', 'stipend_mentioned', 'easy_apply',
-                    'ai_score', 'keyword_pass', 'final_decision'
+                    'ai_score', 'keyword_score', 'hybrid_score', 'keyword_pass', 'final_decision'
                 ])
             print(f"📊 Created CSV dataset: {CSV_FILE}")
         except Exception as e:
@@ -125,6 +136,8 @@ def save_to_csv(jobs):
                     job.get('has_stipend', False),
                     job.get('easy_apply', False),
                     job.get('ai_score', None),
+                    job.get('keyword_score', None),
+                    job.get('hybrid_score', None),
                     True,
                     'Sent'
                 ])
@@ -358,7 +371,7 @@ def linkedin_jobs():
                         "source": "LinkedIn",
                         "easy_apply": easy_apply,
                         "location": location,
-                        "description": description,  # Enhanced with more context
+                        "description": description,
                         "stipend": ""
                     })
                     
@@ -630,10 +643,11 @@ def format_telegram_message(jobs):
             msg += f" • {job['location']}"
         
         ai_score = job.get('ai_score')
+        keyword_score = job.get('keyword_score')
+        hybrid_score = job.get('hybrid_score')
         
-        # Show AI score if available (including low scores)
+        # Show AI score if available
         if ai_score is not None:
-            # Smart emoji based on score
             if ai_score >= 0.70:
                 score_emoji = "🎯"
             elif ai_score >= 0.50:
@@ -641,9 +655,26 @@ def format_telegram_message(jobs):
             elif ai_score >= 0.20:
                 score_emoji = "⚡"
             else:
-                score_emoji = "🔍"  # Very low score
+                score_emoji = "🔍"
             
             msg += f"\n   {score_emoji} AI Match: {ai_score:.2f} ({int(ai_score*100)}%)"
+        
+        # Show hybrid score if available
+        if hybrid_score is not None:
+            if hybrid_score >= 0.70:
+                hybrid_emoji = "🎯"
+            elif hybrid_score >= 0.50:
+                hybrid_emoji = "✅"
+            elif hybrid_score >= 0.20:
+                hybrid_emoji = "⚡"
+            else:
+                hybrid_emoji = "🔍"
+            
+            msg += f"\n   🧠 Hybrid Match: {hybrid_score:.2f} ({int(hybrid_score*100)}%)"
+            
+            # Show keyword match rate
+            if keyword_score is not None:
+                msg += f" [Skills: {int(keyword_score*100)}%]"
         
         msg += f"\n   🔗 {job['link']}\n\n"
     
@@ -653,7 +684,8 @@ def format_telegram_message(jobs):
     msg += f"\n{'─'*40}\n"
     msg += "💡 <b>Legend:</b>\n"
     msg += "⭐ Easy Apply • 💰 Stipend • 📍 Preferred Location\n"
-    msg += "🎯 Excellent Match (70%+) • ✅ Good Match (50%+) • ⚡ AI Scored • 🔍 Low Score"
+    msg += "🎯 Excellent (70%+) • ✅ Good (50%+) • ⚡ Moderate • 🔍 Low\n"
+    msg += "🧠 Hybrid = 70% AI + 30% Skills Match"
     
     return msg
 
@@ -706,6 +738,34 @@ def main():
             print(f"⚠️ AI scoring skipped: AI_ENABLED={AI_ENABLED}, final_jobs count={len(final_jobs) if final_jobs else 0}")
             for job in final_jobs:
                 job['ai_score'] = None
+        
+        # ============================================
+        # HYBRID SCORING (COMPOSES ON AI SCORE)
+        # ============================================
+        if HYBRID_ENABLED and final_jobs:
+            try:
+                print(f"\n{'='*70}")
+                print(f"🧠 HYBRID_ENABLED = True, calculating hybrid scores...")
+                final_jobs = add_hybrid_scores_to_jobs(final_jobs)
+                
+                # Diagnostic: Check hybrid scores
+                hybrid_jobs = [j for j in final_jobs if j.get('hybrid_score') is not None]
+                if hybrid_jobs:
+                    avg_hybrid = sum(j['hybrid_score'] for j in hybrid_jobs) / len(hybrid_jobs)
+                    avg_keyword = sum(j.get('keyword_score', 0) for j in hybrid_jobs) / len(hybrid_jobs)
+                    print(f"🧠 Hybrid scores added: {len(hybrid_jobs)}/{len(final_jobs)} jobs")
+                    print(f"🧠 Average keyword score: {avg_keyword:.3f}")
+                    print(f"🧠 Average hybrid score: {avg_hybrid:.3f}")
+                else:
+                    print(f"⚠️ WARNING: No hybrid scores calculated!")
+                
+                print(f"{'='*70}")
+            except Exception as e:
+                print(f"⚠️ Hybrid scoring failed (continuing without hybrid scores): {e}")
+                import traceback
+                traceback.print_exc()
+        else:
+            print(f"⚠️ Hybrid scoring skipped: HYBRID_ENABLED={HYBRID_ENABLED}")
         
         if final_jobs:
             save_to_csv(final_jobs)
