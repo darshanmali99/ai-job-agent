@@ -2,7 +2,7 @@ name: Job Agent
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # 8:30 AM IST
+    - cron: '0 3,6,9,12,15,18 * * *'  # Every 3 hours: 8:30 AM, 11:30 AM, 2:30 PM, 5:30 PM, 8:30 PM, 11:30 PM IST
   workflow_dispatch:
 
 permissions:
@@ -21,9 +21,9 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Install libraries
+      - name: Install dependencies
         run: |
-          pip install requests beautifulsoup4 lxml
+          pip install -r requirements.txt
       
       - name: Run script
         env:
