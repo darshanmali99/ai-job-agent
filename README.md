@@ -119,7 +119,7 @@
 
 1. Open Telegram and search for `@BotFather`
 2. Send `/newbot` and follow instructions
-3. Copy your bot token (looks like `110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw`)
+3. Copy your bot token 
 4. Get your chat ID:
    - Send a message to your bot
    - Visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
