@@ -33,6 +33,21 @@ try:
 except Exception as e:
     HYBRID_ENABLED = False
     print(f"⚠️ Hybrid scorer disabled: {e}")
+    
+ # ============================================
+# OPTIONAL COMPANY RANKER (SAFE / NON-BREAKING)
+# ============================================
+try:
+    from company_ranker import (
+        add_company_scores_to_jobs,
+        calculate_final_rank,
+        should_send_telegram_alert
+    )
+    COMPANY_RANKER_ENABLED = True
+    print("✅ Company ranker module loaded")
+except Exception as e:
+    COMPANY_RANKER_ENABLED = False
+    print(f"⚠️ Company ranker disabled: {e}")
 
 # EXPANDED Location preferences
 PREFERRED_LOCATIONS = [
@@ -112,7 +127,9 @@ def init_csv():
                 writer.writerow([
                     'date', 'title', 'source', 'link', 
                     'location', 'stipend_mentioned', 'easy_apply',
-                    'ai_score', 'keyword_score', 'hybrid_score', 'keyword_pass', 'final_decision'
+                    'ai_score', 'keyword_score', 'hybrid_score',
+                    'company_score', 'final_rank_score',
+                    'keyword_pass', 'final_decision'
                 ])
             print(f"📊 Created CSV dataset: {CSV_FILE}")
         except Exception as e:
@@ -138,6 +155,8 @@ def save_to_csv(jobs):
                     job.get('ai_score', None),
                     job.get('keyword_score', None),
                     job.get('hybrid_score', None),
+                    job.get('company_score', None),
+                    job.get('final_rank_score', None),
                     True,
                     'Sent'
                 ])
@@ -636,7 +655,16 @@ def format_telegram_message(jobs):
         stipend = "💰 " if job.get('has_stipend') else ""
         location_icon = "📍 " if job.get('location_match') else ""
         
-        msg += f"{i}. {star}{stipend}{location_icon}<b>{job['title']}</b>\n"
+        # Company tier badge
+        company_tier = job.get('company_tier', 3)
+        if company_tier == 1:
+            tier_badge = "🏆 "
+        elif company_tier == 2:
+            tier_badge = "🌟 "
+        else:
+            tier_badge = ""
+        
+        msg += f"{i}. {tier_badge}{star}{stipend}{location_icon}<b>{job['title']}</b>\n"
         msg += f"   🏢 {job['source']}"
         
         if job.get('location'):
@@ -676,6 +704,30 @@ def format_telegram_message(jobs):
             if keyword_score is not None:
                 msg += f" [Skills: {int(keyword_score*100)}%]"
         
+        # Show company score and final rank
+        company_score = job.get('company_score')
+        final_rank = job.get('final_rank_score')
+        
+        if company_score is not None:
+            if company_score >= 1.0:
+                company_emoji = "🏆"
+            elif company_score >= 0.85:
+                company_emoji = "🌟"
+            else:
+                company_emoji = "🏢"
+            
+            msg += f"\n   {company_emoji} Company: {company_score:.2f} ({int(company_score*100)}%)"
+        
+        if final_rank is not None:
+            if final_rank >= 0.80:
+                rank_emoji = "🎯"
+            elif final_rank >= 0.65:
+                rank_emoji = "✅"
+            else:
+                rank_emoji = "⚡"
+            
+            msg += f"\n   {rank_emoji} Final Rank: {final_rank:.2f} ({int(final_rank*100)}%)"
+        
         msg += f"\n   🔗 {job['link']}\n\n"
     
     if len(jobs) > 20:
@@ -684,8 +736,101 @@ def format_telegram_message(jobs):
     msg += f"\n{'─'*40}\n"
     msg += "💡 <b>Legend:</b>\n"
     msg += "⭐ Easy Apply • 💰 Stipend • 📍 Preferred Location\n"
+    msg += "🏆 Tier 1 (Top MNC) • 🌟 Tier 2 (Mid-tier)\n"
     msg += "🎯 Excellent (70%+) • ✅ Good (50%+) • ⚡ Moderate • 🔍 Low\n"
-    msg += "🧠 Hybrid = 70% AI + 30% Skills Match"
+    msg += "🧠 Hybrid = 70% AI + 30% Skills | 🏢 Company Reputation\n"
+    msg += "🎯 Final Rank = 50% Hybrid + 50% Company"
+```
+
+7. **Scroll to top**, add **commit message**: `Integrate company ranker - Tier-based filtering`
+
+8. Click **"Commit changes"**
+
+---
+
+## 🗑️ PHASE 4: RESET CSV FILE (2 minutes)
+
+### **STEP 10: Clean CSV for New Format**
+
+1. In repository, click **`jobs_dataset.csv`**
+2. Click **trash icon** (Delete this file)
+3. **Commit message**: `Reset CSV for company ranker upgrade`
+4. Click **"Commit changes"**
+
+**Why?** Old CSV has 12 columns, new has 14. Fresh start prevents parsing errors.
+
+---
+
+## ✅ PHASE 5: VERIFICATION (5 minutes)
+
+### **STEP 11: Trigger Manual Run**
+
+1. Go to **Actions** tab
+2. Click **"Job Agent"** workflow
+3. Click **"Run workflow"** (top right)
+4. Click green **"Run workflow"** button
+5. **Wait 30-60 seconds**
+
+---
+
+### **STEP 12: Check GitHub Actions Logs**
+
+1. Click on the running workflow
+2. Click **"run"** job
+3. Click **"Run script"** step
+4. **Look for these lines**:
+
+**✅ Expected SUCCESS output**:
+```
+✅ AI matcher module loaded
+✅ Hybrid scorer module loaded
+✅ Company ranker module loaded
+
+🏢 COMPANY_RANKER_ENABLED = True, scoring companies...
+🏢 Tier 1 (Top MNCs): X jobs
+🏢 Tier 2 (Mid-tier): Y jobs
+🏢 Tier 3 (Unknown): Z jobs
+🏢 Average company score: 0.XXX
+🏢 Average final rank: 0.XXX
+
+📱 Telegram filter:
+   ✅ Sending alerts for: X jobs (Tier 1 & 2)
+   🔇 Suppressing alerts for: Y jobs (Tier 3)
+
+✅ SUCCESS: Sent X high-quality jobs to Telegram
+📊 Logged Z total jobs to CSV (including Tier 3)
+```
+
+**❌ If you see errors**: Check Step 13
+
+---
+
+### **STEP 13: Check Telegram**
+
+Your Telegram should receive a message showing:
+
+**Option A: Tier 1/2 Jobs Found**
+```
+🔥 2 New Data Analyst Opportunities
+10 Feb 2026, 05:00 PM
+
+1. 🏆 Data Analyst Intern
+   🏢 TCS (Tier 1 company)
+   🎯 AI Match: 0.68 (68%)
+   🧠 Hybrid: 0.74 (74%)
+   🏆 Company: 1.00 (100%)
+   🎯 Final Rank: 0.87 (87%)
+   🔗 https://...
+```
+
+**Option B: Only Tier 3 Jobs**
+```
+ℹ️ Job Agent Update
+
+Found 5 new jobs, but none from Tier 1 or Tier 2 companies.
+
+🔇 Alerts suppressed for unknown/low-reputation companies.
+📊 All jobs logged to CSV for your review.
     
     return msg
 
@@ -766,15 +911,103 @@ def main():
                 traceback.print_exc()
         else:
             print(f"⚠️ Hybrid scoring skipped: HYBRID_ENABLED={HYBRID_ENABLED}")
-        
-        if final_jobs:
-            save_to_csv(final_jobs)
-            
+        # ============================================
+        # COMPANY RANKING & FINAL SCORE CALCULATION
+        # ============================================
+        if COMPANY_RANKER_ENABLED and final_jobs:
+            try:
+                print(f"\n{'='*70}")
+                print(f"🏢 COMPANY_RANKER_ENABLED = True, scoring companies...")
+                final_jobs = add_company_scores_to_jobs(final_jobs)
+                
+                # Calculate final rank for each job
+                for job in final_jobs:
+                    job['final_rank_score'] = calculate_final_rank(job)
+                
+                # Diagnostics
+                tier1_jobs = [j for j in final_jobs if j.get('company_tier') == 1]
+                tier2_jobs = [j for j in final_jobs if j.get('company_tier') == 2]
+                tier3_jobs = [j for j in final_jobs if j.get('company_tier') == 3]
+                
+                print(f"🏢 Tier 1 (Top MNCs): {len(tier1_jobs)} jobs")
+                print(f"🏢 Tier 2 (Mid-tier): {len(tier2_jobs)} jobs")
+                print(f"🏢 Tier 3 (Unknown): {len(tier3_jobs)} jobs")
+                
+                if final_jobs:
+                    avg_company = sum(j.get('company_score', 0) for j in final_jobs) / len(final_jobs)
+                    avg_final_rank = sum(j.get('final_rank_score', 0) for j in final_jobs) / len(final_jobs)
+                    print(f"🏢 Average company score: {avg_company:.3f}")
+                    print(f"🏢 Average final rank: {avg_final_rank:.3f}")
+                
+                print(f"{'='*70}")
+            except Exception as e:
+                print(f"⚠️ Company ranking failed (continuing without scores): {e}")
+                import traceback
+                traceback.print_exc()
+                for job in final_jobs:
+                    job['company_score'] = 0.4
+                    job['company_tier'] = 3
+                    job['final_rank_score'] = job.get('hybrid_score', 0) * 0.5 + 0.2
+        else:
+            print(f"⚠️ Company ranking skipped: COMPANY_RANKER_ENABLED={COMPANY_RANKER_ENABLED}")
             for job in final_jobs:
+                job['company_score'] = 0.4
+                job['company_tier'] = 3
+                job['final_rank_score'] = job.get('hybrid_score', 0) * 0.5 + 0.2
+        
+        # ============================================
+        # FILTER FOR TELEGRAM (Tier 1 & 2 ONLY)
+        # ============================================
+        telegram_jobs = []
+        suppressed_jobs = []
+        
+        if COMPANY_RANKER_ENABLED and final_jobs:
+            for job in final_jobs:
+                if should_send_telegram_alert(job):
+                    telegram_jobs.append(job)
+                else:
+                    suppressed_jobs.append(job)
+            
+            print(f"\n📱 Telegram filter:")
+            print(f"   ✅ Sending alerts for: {len(telegram_jobs)} jobs (Tier 1 & 2)")
+            print(f"   🔇 Suppressing alerts for: {len(suppressed_jobs)} jobs (Tier 3)")
+        else:
+            telegram_jobs = final_jobs
+        for job in final_jobs:
                 mark_as_sent(job.get('link', ''), history)
             save_history(history)
+        
+        # Send ONLY Tier 1 & 2 to Telegram
+        if telegram_jobs:
+            message = format_telegram_message(telegram_jobs)
+            send_telegram(message)
             
-            message = format_telegram_message(final_jobs)
+            print(f"\n{'='*70}")
+            print(f"✅ SUCCESS: Sent {len(telegram_jobs)} high-quality jobs to Telegram")
+            print(f"📊 Logged {len(final_jobs)} total jobs to CSV (including Tier 3)")
+            
+            sources = {}
+            for job in telegram_jobs:
+                source = job.get('source', 'Unknown')
+                sources[source] = sources.get(source, 0) + 1
+            
+            print(f"\n📊 Telegram alerts by source:")
+            for source, count in sorted(sources.items(), key=lambda x: x[1], reverse=True):
+                print(f"   • {source}: {count} jobs")
+            
+            print(f"{'='*70}\n")
+        else:
+            if final_jobs:
+                message = (
+                    "ℹ️ <b>Job Agent Update</b>\n\n"
+                    f"Found {len(final_jobs)} new jobs, but none from Tier 1 or Tier 2 companies.\n\n"
+                    "🔇 Alerts suppressed for unknown/low-reputation companies.\n"
+                    "📊 All jobs logged to CSV for your review.\n\n"
+                    f"🕐 {datetime.now().strftime('%d %b %Y, %I:%M %p')}"
+                )
+            else:
+                message = format_telegram_message([])
+            
             send_telegram(message)
             
             print(f"\n{'='*70}")
