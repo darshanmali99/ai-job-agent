@@ -1,6 +1,9 @@
-# 🤖 AI Job Agent — Data Analyst Internship Intelligence Bot
+# 🤖 AI Job Agent — Intelligent Data Analyst Internship Tracker
 
-An automated, AI-powered job intelligence system that scrapes, filters, scores, and delivers Data Analyst and Business Analyst internship opportunities directly to Telegram with semantic AI matching and hybrid scoring.
+
+> An automated, AI-powered job intelligence system that scrapes, filters, scores, and delivers Data Analyst and Business Analyst internship opportunities with real-time analytics dashboard.
+
+![Dashboard Preview](https://img.shields.io/badge/Live-Dashboard-success)
 
 ---
 
@@ -13,28 +16,50 @@ An automated, AI-powered job intelligence system that scrapes, filters, scores, 
 - **70+ Jobs/Run**: Comprehensive coverage of opportunities
 
 ### **🧠 AI-Powered Intelligence**
-- **Semantic AI Scoring**: 0-100% relevance matching using keyword-based semantic analysis
-- **Skill Detection**: Automatically identifies Python, SQL, Excel, Power BI, Tableau, etc.
-- **Hybrid Scoring**: Combines 70% AI semantic score + 30% keyword skill matching
+- **Semantic AI Scoring** (0-100%): Keyword-based semantic analysis
+- **Skill Detection**: Python, SQL, Excel, Power BI, Tableau, Machine Learning
+- **Hybrid Scoring**: 70% AI semantic + 30% keyword skill matching
 - **Smart Ranking**: Jobs sorted by relevance score
 
-### **📊 Research-Grade Data Logging**
+### **📊 Real-Time Analytics Dashboard**
+- **Live Streamlit Dashboard**: Interactive data visualization
+- **Executive KPIs**: Total jobs, avg scores, top skills, remote %
+- **Advanced Charts**: Trend analysis, source distribution, skill demand
+- **Filtering**: By date, source, AI score, keywords
+- **Export**: Download filtered data as CSV
+
+### **📱 Instant Telegram Alerts**
+- **Real-Time Notifications**: New jobs delivered immediately
+- **Rich Formatting**: Emojis, scores, and clickable links
+- **Score Indicators**: 🎯 Excellent (70%+) • ✅ Good (50%+) • ⚡ Moderate • 🔍 Low
+- **Smart Filtering**: Only relevant matches
+
+### **📈 Research-Grade Data Logging**
 - **CSV Dataset**: All jobs logged with scores and metadata
 - **12 Data Fields**: Date, title, source, link, location, stipend, scores, decision
 - **Publication-Ready**: Metrics for academic research and analysis
-- **Deduplication**: Tracks 1500+ job history to prevent duplicates
-
-### **📱 Real-Time Telegram Alerts**
-- **Instant Notifications**: New jobs delivered immediately
-- **Rich Formatting**: Emojis, scores, and clickable links
-- **Score Indicators**: 🎯 Excellent (70%+) • ✅ Good (50%+) • ⚡ Moderate • 🔍 Low
-- **Smart Filtering**: Only see jobs that match your profile
+- **Deduplication**: Tracks 1500+ job history
 
 ### **⚙️ Production-Grade Automation**
 - **GitHub Actions**: Fully automated, zero maintenance
 - **CPU-Only**: No GPU or ML dependencies required
-- **Graceful Degradation**: System works even if AI fails
+- **Graceful Degradation**: System works even if components fail
 - **Error Handling**: Robust error recovery and logging
+
+---
+
+## 📊 Live Dashboard
+
+**Access the dashboard**: [[Your Streamlit App URL](https://ai-job-agent-cpznbwvmuilyzvmxnjwy76.streamlit.app/)]
+
+### Dashboard Features:
+- 📊 **Executive KPIs**: Jobs tracked, AI scores, top skills, remote %
+- 📈 **Trend Analysis**: Jobs per day line chart
+- 🎯 **Source Distribution**: Donut chart by portal
+- 💻 **Skill Demand**: Bar chart for top technical skills
+- 📋 **Job Details**: Interactive table with clickable links
+- 💾 **Export**: Download filtered data
+
 
 ---
 
@@ -42,7 +67,7 @@ An automated, AI-powered job intelligence system that scrapes, filters, scores, 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    GITHUB ACTIONS (Every 3h)                 │
+│                   GITHUB ACTIONS (Every 3h)                  │
 │                                                              │
 │  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐ │
 │  │   LinkedIn   │    │  Internshala │    │    Indeed    │ │
@@ -75,8 +100,8 @@ An automated, AI-powered job intelligence system that scrapes, filters, scores, 
 │           ┌───────────────┼───────────────┐                  │
 │           ▼               ▼               ▼                  │
 │    ┌────────────┐  ┌────────────┐  ┌────────────┐          │
-│    │  Telegram  │  │  CSV Log   │  │  History   │          │
-│    │   Alert    │  │  Dataset   │  │   JSON     │          │
+│    │  Telegram  │  │  CSV Log   │  │  Streamlit │          │
+│    │   Alert    │  │  Dataset   │  │ Dashboard  │          │
 │    └────────────┘  └────────────┘  └────────────┘          │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -88,13 +113,13 @@ An automated, AI-powered job intelligence system that scrapes, filters, scores, 
 ### **Prerequisites**
 - GitHub account
 - Telegram account
-- Python 3.11+ (for local testing)
+- Streamlit Cloud account (free)
 
 ### **Step 1: Create Telegram Bot**
 
 1. Open Telegram and search for `@BotFather`
 2. Send `/newbot` and follow instructions
-3. Copy your bot token 
+3. Copy your bot token (looks like `110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw`)
 4. Get your chat ID:
    - Send a message to your bot
    - Visit: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
@@ -114,7 +139,19 @@ An automated, AI-powered job intelligence system that scrapes, filters, scores, 
 2. Click **"I understand my workflows, go ahead and enable them"**
 3. The bot will now run automatically every 3 hours!
 
-### **Step 4: Manual Test Run (Optional)**
+### **Step 4: Deploy Dashboard (Optional)**
+
+1. Go to https://share.streamlit.io/
+2. Sign in with GitHub
+3. Click "New app"
+4. Select:
+   - Repository: `your-username/ai-job-agent`
+   - Branch: `main`
+   - Main file path: `dashboard.py`
+5. Click "Deploy"
+6. Your dashboard will be live in 2-3 minutes!
+
+### **Step 5: Manual Test Run (Optional)**
 
 1. Go to **Actions** tab
 2. Click **"Job Agent"** workflow
@@ -150,6 +187,16 @@ An automated, AI-powered job intelligence system that scrapes, filters, scores, 
 🧠 Hybrid = 70% AI + 30% Skills Match
 ```
 
+### **Dashboard KPIs**
+```
+📊 Executive KPIs
+────────────────────────────────────────
+Total Jobs Tracked: 85
+Average AI Score: 52%
+Top Skill in Demand: SQL (45 jobs)
+Remote Opportunities: 30.5% (26 jobs)
+```
+
 ### **CSV Dataset**
 ```csv
 date,title,source,link,location,stipend_mentioned,easy_apply,ai_score,keyword_score,hybrid_score,keyword_pass,final_decision
@@ -163,7 +210,7 @@ date,title,source,link,location,stipend_mentioned,easy_apply,ai_score,keyword_sc
 
 ### **AI Semantic Scoring (0.0 - 1.0)**
 
-The system uses keyword-based semantic matching to score job relevance:
+Keyword-based semantic matching to score job relevance:
 
 ```python
 Score = (High Priority Skills × 0.20) + 
@@ -218,15 +265,16 @@ Hybrid Score = (0.7 × AI Score) + (0.3 × Keyword Score)
 ai-job-agent/
 ├── .github/
 │   └── workflows/
-│       ├── job.yml              # Main automation workflow (runs every 3h)
-│       └── test.yml             # Testing workflow (manual trigger)
-├── job_agent.py                 # Main scraping and filtering engine
-├── ai_matcher.py                # AI semantic scoring module
+│       ├── job.yml              # Main automation (every 3h)
+│       └── test.yml             # Testing workflow (manual)
+├── job_agent.py                 # Main scraping engine
+├── ai_matcher.py                # AI semantic scoring
 ├── hybrid_scorer.py             # Hybrid scoring (AI + Keywords)
-├── test_scoring.py              # Diagnostic testing script
+├── dashboard.py                 # Streamlit analytics dashboard
+├── test_scoring.py              # Diagnostic testing
 ├── requirements.txt             # Python dependencies
-├── jobs_history.json            # Deduplication memory (auto-generated)
-├── jobs_dataset.csv             # Research data logs (auto-generated)
+├── jobs_history.json            # Deduplication memory (auto)
+├── jobs_dataset.csv             # Research data logs (auto)
 └── README.md                    # This file
 ```
 
@@ -261,7 +309,7 @@ Edit `.github/workflows/job.yml` (line 4):
 
 ```yaml
 schedule:
-  - cron: '0 */3 * * *'  # Every 3 hours
+  - cron: '0 */3 * * *'  # Every 3 hours (current)
   # - cron: '0 9,17 * * *'  # Twice daily at 9 AM and 5 PM
   # - cron: '0 9 * * 1-5'   # Weekdays only at 9 AM
 ```
@@ -307,6 +355,62 @@ Job 1: Data Analyst Intern (Excel, SQL, Power BI)
 
 ✅ SUCCESS: AI scoring is working correctly!
 ```
+
+### **Test Dashboard Locally**
+
+```bash
+streamlit run dashboard.py
+```
+
+Opens browser at `http://localhost:8501`
+
+---
+
+## 📊 Dashboard Usage
+
+### **Filters**
+- **Min AI Score**: Slider (0.0-1.0) to filter by relevance
+- **Date Range**: Select start and end dates
+- **Job Portals**: Multi-select LinkedIn, Internshala, etc.
+- **Search**: Keyword search in title/location
+
+### **KPIs**
+- **Total Jobs Tracked**: Count of filtered jobs
+- **Average AI Score**: Mean AI relevance (%)
+- **Top Skill in Demand**: Most mentioned technical skill
+- **Remote Opportunities**: % of remote/WFH jobs
+
+### **Charts**
+- **Daily Trend**: Line chart showing jobs posted per day
+- **Source Distribution**: Donut chart of jobs by portal
+- **Skill Demand**: Bar chart of technical skills mentioned
+
+### **Data Table**
+- **Interactive**: Click job links to apply
+- **Progress Bars**: Visual AI/Hybrid scores
+- **Sortable**: Click column headers to sort
+
+### **Export**
+- Click "Download CSV" to export filtered data
+- Timestamped filename for easy tracking
+
+---
+
+## 📈 Performance Metrics
+
+### **Current System Performance**
+- **Jobs Scraped**: 70 per run (LinkedIn: 40, Internshala: 30)
+- **Run Frequency**: Every 3 hours (8 times/day)
+- **Deduplication**: 1500 job memory
+- **Success Rate**: 99%+ uptime
+- **Average AI Score**: 52% (moderate relevance)
+- **Average Hybrid Score**: 55%
+
+### **Score Distribution**
+- 🎯 Excellent (70%+): ~25% of jobs
+- ✅ Good (50-69%): ~25% of jobs
+- ⚡ Moderate (30-49%): ~40% of jobs
+- 🔍 Low (<30%): ~10% of jobs
 
 ---
 
@@ -369,6 +473,17 @@ print(skill_gap[['title', 'source', 'ai_score', 'keyword_score']])
 
 ---
 
+### **Dashboard Not Loading Data**
+
+**Cause**: CSV file missing or malformed
+
+**Solution**:
+1. Check if `jobs_dataset.csv` exists in repository
+2. Verify it has correct header (12 columns)
+3. Delete and let GitHub Actions regenerate it
+
+---
+
 ### **Telegram Not Working**
 
 **Cause**: Invalid bot token or chat ID
@@ -391,21 +506,14 @@ print(skill_gap[['title', 'source', 'ai_score', 'keyword_score']])
 
 ---
 
-## 📈 Performance Metrics
+### **Dashboard Shows Old Data**
 
-### **Current System Performance**
-- **Jobs Scraped**: 70 per run (LinkedIn: 40, Internshala: 30)
-- **Run Frequency**: Every 3 hours (8 times/day)
-- **Deduplication**: 1500 job memory
-- **Success Rate**: 99%+ uptime
-- **Average AI Score**: 52% (moderate relevance)
-- **Average Hybrid Score**: 55%
+**Cause**: Streamlit cache (5-minute TTL)
 
-### **Score Distribution**
-- 🎯 Excellent (70%+): ~25% of jobs
-- ✅ Good (50-69%): ~25% of jobs
-- ⚡ Moderate (30-49%): ~40% of jobs
-- 🔍 Low (<30%): ~10% of jobs
+**Solution**:
+1. Wait 5 minutes for auto-refresh
+2. Click "Rerun" button in dashboard
+3. Press 'R' key to force refresh
 
 ---
 
@@ -434,7 +542,8 @@ This system generates publication-ready data for research:
 - **Language**: Python 3.11
 - **Automation**: GitHub Actions
 - **Web Scraping**: BeautifulSoup4, Requests
-- **Data Processing**: CSV, JSON
+- **Dashboard**: Streamlit, Plotly
+- **Data Processing**: Pandas, CSV, JSON
 - **Notifications**: Telegram Bot API
 - **Scheduling**: Cron (GitHub Actions)
 - **AI/ML**: Keyword-based semantic matching (no external models)
@@ -448,6 +557,8 @@ requests>=2.31.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.3
 python-telegram-bot>=20.0
+streamlit>=1.31.0
+plotly>=5.18.0
 ```
 
 **Note**: No heavy ML dependencies (TensorFlow, PyTorch, sentence-transformers) required!
@@ -460,29 +571,41 @@ Contributions are welcome! Areas for improvement:
 
 - [ ] Add more job portals (Glassdoor, Monster, etc.)
 - [ ] Email notifications for high-scoring jobs
-- [ ] Web dashboard for visualizations
-- [ ] Advanced ML-based semantic matching
-- [ ] Multi-user support
-- [ ] Customizable filtering rules per user
 - [ ] Mobile app integration
+- [ ] Advanced ML-based semantic matching
+- [ ] Multi-user support with personalized profiles
+- [ ] Customizable filtering rules per user
+- [ ] Company reputation scoring
+- [ ] Salary range prediction
 
 ---
 
+## 📄 License
+
+MIT License - feel free to use and modify for your needs!
+
+---
 
 ## 🎯 Future Enhancements
 
 ### **Short-term**
 - [ ] Add email alerts for 70%+ matches
-- [ ] Create visualization dashboard
-- [ ] Export to Google Sheets
+- [ ] Export to Google Sheets integration
 - [ ] Add more technical skills to detection
+- [ ] Company size/reputation filtering
+
+### **Medium-term**
+- [ ] Dashboard user authentication
+- [ ] Historical trend comparisons
+- [ ] Job application tracking
+- [ ] Interview preparation recommendations
 
 ### **Long-term**
 - [ ] Advanced NLP with sentence-transformers
 - [ ] Multi-language support
-- [ ] Company reputation scoring
-- [ ] Salary range prediction
-- [ ] Interview preparation recommendations
+- [ ] Salary range prediction ML model
+- [ ] Company culture analysis
+- [ ] Career path recommendations
 
 ---
 
@@ -490,6 +613,8 @@ Contributions are welcome! Areas for improvement:
 
 Built with:
 - [BeautifulSoup](https://www.crummy.com/software/BeautifulSoup/) for web scraping
+- [Streamlit](https://streamlit.io/) for dashboard
+- [Plotly](https://plotly.com/) for interactive charts
 - [Telegram Bot API](https://core.telegram.org/bots/api) for notifications
 - [GitHub Actions](https://github.com/features/actions) for automation
 
@@ -511,6 +636,17 @@ If this project helped you land a job, give it a star! ⭐
 
 ---
 
-**Made with ❤️ for data analysts seeking internships**
+
+**Made with ❤️ for data analysts seeking their dream internship**
 
 **Last Updated**: February 2026
+
+---
+
+## 💼 About the Author
+
+Built by a data analyst who needed a smarter way to track job opportunities. This project started as a simple scraper and evolved into a full AI-powered intelligence system.
+
+---
+
+**Start your job search journey today! Fork this repo and let AI find your perfect opportunity.** 🚀
