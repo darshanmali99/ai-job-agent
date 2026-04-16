@@ -1,196 +1,195 @@
- AI Job Agent — Career-Quality Intelligence System
-Automated AI-powered job tracker that scrapes, scores, and delivers ONLY top-tier company opportunities to Telegram with real-time analytics.
+"""
+AI Job Agent - Analytics Dashboard
+READ-ONLY MODE: Safely reads from jobs_dataset.csv
+HANDLES MALFORMED DATA GRACEFULLY
+"""
 
-🎯 Key Innovation: Filters out unknown startups, alerts ONLY for Tier 1 & 2 companies (Google, TCS, Flipkart, Deloitte, etc.)
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from datetime import datetime
+import re
+from pathlib import Path
 
-🚀 Features
-🏆 Company Reputation Filtering (NEW!)
-Tier 1 (Score: 1.0): 80+ Top MNCs — Google, TCS, Deloitte, Flipkart, Accenture
-Tier 2 (Score: 0.85): 70+ Mid-tier — Hexaware, OYO, Unacademy, Naukri
-Tier 3 (Score: 0.4): Unknown startups — Alerts suppressed, CSV logged only
-🧠 Triple Scoring System
-AI Semantic Score: 0-100% relevance using keyword-based analysis
-Keyword Skill Match: Detects Python, SQL, Excel, Power BI, Tableau, ML
-Hybrid Score: 70% AI + 30% Skills
-Final Rank: 50% Hybrid + 50% Company Reputation
-🔍 Multi-Portal Scraping
-LinkedIn, Internshala, Indeed, Naukri, Instahyre
-70+ jobs/run, every 3 hours via GitHub Actions
-Smart deduplication (1500 job memory)
-📊 Live Dashboard
-Real-time KPIs: Total jobs, AI scores, top skills, remote %
-Interactive charts: Daily trends, source distribution, skill demand
-Export filtered data as CSV
-📱 Telegram Alerts
-ONLY Tier 1 & 2 companies → Telegram ✅
-Tier 3 startups → CSV only (suppressed from alerts)
-Rich formatting: Scores, badges, clickable links
-📈 Research-Grade Data
-14-column CSV dataset with all scores
-Publication-ready metrics
-Historical trend analysis
-📊 Sample Output
-Telegram (Tier 1/2 Found)
-🔥 3 New Data Analyst Opportunities
+st.set_page_config(page_title="AI Job Agent Dashboard", page_icon="🤖", layout="wide")
 
-1. 🏆 Data Analyst Intern
-   🏢 Google India
-   🎯 AI Match: 0.85 (85%)
-   🧠 Hybrid: 0.89 (89%) [Skills: 100%]
-   🏆 Company: 1.00 (100%)
-   🎯 Final Rank: 0.945 (94%)
-Telegram (Only Tier 3)
-ℹ️ Job Agent Update
+@st.cache_data(ttl=300)
+def load_data():
+    """Load jobs_dataset.csv safely - handles parsing errors"""
+    csv_path = Path("jobs_dataset.csv")
+    if not csv_path.exists():
+        return pd.DataFrame()
+    
+    try:
+        # Try reading with error handling for inconsistent columns
+        df = pd.read_csv(csv_path, on_bad_lines='skip', engine='python')
+        
+        # Ensure required columns exist
+        required_cols = ['date', 'title', 'source', 'link']
+        for col in required_cols:
+            if col not in df.columns:
+                st.error(f"Missing required column: {col}")
+                return pd.DataFrame()
+        
+        # Parse dates
+        if 'date' in df.columns:
+            df['date'] = pd.to_datetime(df['date'], errors='coerce')
+        
+        # Handle numeric columns (may be missing in old data)
+        for col in ['ai_score', 'keyword_score', 'hybrid_score']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+            else:
+                df[col] = 0  # Add column if missing
+        
+        # Add location if missing
+        if 'location' not in df.columns:
+            df['location'] = ''
+        
+        return df
+    
+    except Exception as e:
+        st.error(f"CSV Parsing Error: {e}")
+        st.info("💡 **Fix**: Go to your repository → Edit jobs_dataset.csv → Delete all content → Add header line → Commit")
+        st.code("date,title,source,link,location,stipend_mentioned,easy_apply,ai_score,keyword_score,hybrid_score,keyword_pass,final_decision", language="csv")
+        return pd.DataFrame()
 
-Found 2 new jobs, but none from Tier 1 or Tier 2 companies.
+def extract_skills(text):
+    """Extract skills from title"""
+    if pd.isna(text):
+        return []
+    text_lower = str(text).lower()
+    skills = {
+        'Python': r'\bpython\b', 'SQL': r'\bsql\b', 'Excel': r'\bexcel\b',
+        'Power BI': r'\bpower\s*bi\b|\bpowerbi\b', 'Tableau': r'\btableau\b',
+        'Machine Learning': r'\bmachine\s*learning\b|\bml\b'
+    }
+    return [s for s, p in skills.items() if re.search(p, text_lower)]
 
-🔇 Alerts suppressed for unknown/low-reputation companies.
-📊 All jobs logged to CSV for your review.
-Dashboard KPIs
-Total Jobs: 10
-Avg AI Score: 58.2%
-Top Skill: SQL
-Remote: 0.0%
-🎯 System Architecture
-Scraping → Filtering → AI Scoring → Hybrid Scoring → Company Ranking
-    ↓          ↓            ↓              ↓                ↓
-LinkedIn  Entry-level  Semantic      70% AI +      Tier 1/2/3
-Internshala  roles    Analysis    30% Skills    Classification
-  ↓                                                    ↓
-Telegram Alerts (Tier 1 & 2 ONLY) + CSV Log (ALL)
-🚀 Quick Start
-1. Fork & Configure
-Fork this repository
-Go to Settings → Secrets → Add:
-BOT_TOKEN: Telegram bot token
-CHAT_ID: Your Telegram chat ID
-2. Enable GitHub Actions
-Actions tab → Enable workflows
-System runs automatically every 3 hours
-3. Deploy Dashboard (Optional)
-Go to https://share.streamlit.io/
-Deploy: your-repo → main → dashboard.py
-Live in 2 minutes!
-📂 Project Structure
-ai-job-agent/
-├── job_agent.py          # Main scraping engine
-├── ai_matcher.py         # AI semantic scoring
-├── hybrid_scorer.py      # Hybrid scoring (AI + keywords)
-├── company_ranker.py     # Tier-based company classification (NEW!)
-├── dashboard.py          # Streamlit analytics dashboard
-├── requirements.txt      # Dependencies
-├── jobs_history.json     # Deduplication memory (auto)
-└── jobs_dataset.csv      # Research data logs (auto)
-🎯 How It Works
-Scoring Formula
-# Step 1: AI Semantic Score (0.0-1.0)
-ai_score = keyword_based_semantic_analysis(job)
+def is_remote(row):
+    """Check if remote"""
+    text = f"{row.get('title', '')} {row.get('location', '')}".lower()
+    return any(k in text for k in ['remote', 'work from home', 'wfh'])
 
-# Step 2: Keyword Skill Match (0.0-1.0)
-keyword_score = matched_skills / total_required_skills
+def main():
+    st.title("🤖 AI Job Agent Analytics Dashboard")
+    st.markdown("**Research-Grade Intelligence** | Real-time job market insights")
+    
+    df = load_data()
+    
+    if df.empty:
+        st.warning("⚠️ No data in jobs_dataset.csv")
+        st.info("💡 **Next Steps:**\n1. Fix CSV format (see error above)\n2. Or wait for GitHub Actions to populate fresh data\n3. Refresh this page")
+        st.stop()
+    
+    # SIDEBAR
+    st.sidebar.header("🔍 Filters")
+    min_ai_score = st.sidebar.slider("Min AI Score", 0.0, 1.0, 0.0, 0.05)
+    
+    if 'date' in df.columns and not df['date'].isna().all():
+        date_range = st.sidebar.date_input("Date Range", value=(df['date'].min().date(), df['date'].max().date()))
+        start_date, end_date = (date_range[0], date_range[1]) if len(date_range) == 2 else (date_range[0], date_range[0])
+    else:
+        start_date = end_date = None
+    
+    sources = df['source'].dropna().unique().tolist() if 'source' in df.columns else []
+    selected_sources = st.sidebar.multiselect("Portals", sources, sources) if sources else []
+    keyword = st.sidebar.text_input("🔎 Search", placeholder="Title or location...")
+    
+    # FILTER
+    filtered = df.copy()
+    if 'ai_score' in filtered.columns:
+        filtered = filtered[filtered['ai_score'] >= min_ai_score]
+    if start_date and 'date' in filtered.columns:
+        filtered = filtered[(filtered['date'].dt.date >= start_date) & (filtered['date'].dt.date <= end_date)]
+    if selected_sources and 'source' in filtered.columns:
+        filtered = filtered[filtered['source'].isin(selected_sources)]
+    if keyword:
+        filtered = filtered[filtered['title'].str.contains(keyword, case=False, na=False) | 
+                          filtered.get('location', pd.Series()).str.contains(keyword, case=False, na=False)]
+    
+    # KPIs
+    st.header("📊 KPIs")
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("Total Jobs", f"{len(filtered):,}")
+    with c2:
+        avg = filtered['ai_score'].mean() if 'ai_score' in filtered.columns else 0
+        st.metric("Avg AI Score", f"{avg:.1%}")
+    with c3:
+        all_skills = sum([extract_skills(r.get('title', '')) for _, r in filtered.iterrows()], [])
+        if all_skills:
+            from collections import Counter
+            top = Counter(all_skills).most_common(1)[0]
+            st.metric("Top Skill", top[0], f"{top[1]} jobs")
+        else:
+            st.metric("Top Skill", "N/A")
+    with c4:
+        remote_cnt = sum(filtered.apply(is_remote, axis=1))
+        remote_pct = (remote_cnt / len(filtered) * 100) if len(filtered) > 0 else 0
+        st.metric("Remote %", f"{remote_pct:.1f}%", f"{remote_cnt} jobs")
+    
+    # CHARTS
+    st.header("📈 Analytics")
+    c1, c2 = st.columns(2)
+    
+    with c1:
+        st.subheader("📅 Daily Trend")
+        if 'date' in filtered.columns and not filtered['date'].isna().all():
+            daily = filtered.groupby(filtered['date'].dt.date).size().reset_index()
+            daily.columns = ['Date', 'Count']
+            fig = px.line(daily, x='Date', y='Count', markers=True)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No date data")
+    
+    with c2:
+        st.subheader("🎯 By Source")
+        if 'source' in filtered.columns:
+            src = filtered['source'].value_counts().reset_index()
+            src.columns = ['Source', 'Count']
+            fig = px.pie(src, values='Count', names='Source', hole=0.4)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No source data")
+    
+    st.subheader("💻 Skill Demand")
+    skills = ["Python", "SQL", "Excel", "Power BI", "Tableau", "Machine Learning"]
+    skill_cnt = {s: filtered['title'].str.contains(s, case=False, na=False).sum() for s in skills}
+    skill_cnt = {k: v for k, v in skill_cnt.items() if v > 0}
+    
+    if skill_cnt:
+        skill_df = pd.DataFrame({'Skill': list(skill_cnt.keys()), 'Jobs': list(skill_cnt.values())}).sort_values('Jobs', ascending=True)
+        fig = px.bar(skill_df, x='Jobs', y='Skill', orientation='h', text='Jobs')
+        fig.update_traces(textposition='outside')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No skills found")
+    
+    # TABLE
+    st.header("📋 Jobs")
+    if not filtered.empty:
+        cols = [c for c in ['date', 'title', 'source', 'location', 'ai_score', 'hybrid_score', 'link'] if c in filtered.columns]
+        display = filtered[cols].copy()
+        
+        st.dataframe(
+            display,
+            column_config={
+                "link": st.column_config.LinkColumn("Link", display_text="Apply →"),
+                "ai_score": st.column_config.ProgressColumn("AI", format="%.0f%%", min_value=0, max_value=1),
+                "hybrid_score": st.column_config.ProgressColumn("Hybrid", format="%.0f%%", min_value=0, max_value=1),
+            },
+            hide_index=True,
+            use_container_width=True
+        )
+        
+        st.subheader("💾 Export")
+        csv = filtered.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download CSV", csv, f"jobs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv")
+    else:
+        st.warning("No jobs match filters")
+    
+    st.caption(f"Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} | Total: {len(df):,}")
 
-# Step 3: Hybrid Score
-hybrid_score = 0.7 * ai_score + 0.3 * keyword_score
-
-# Step 4: Company Reputation
-company_score = 1.0 (Tier 1) | 0.85 (Tier 2) | 0.4 (Tier 3)
-
-# Step 5: Final Rank
-final_rank = 0.5 * hybrid_score + 0.5 * company_score
-Telegram Filter
-if company_score >= 0.85:  # Tier 1 or Tier 2
-    send_telegram_alert()
-else:  # Tier 3
-    log_to_csv_only()  # Suppressed
-🏆 Company Tiers
-Tier 1 (80+ companies)
-Google, Microsoft, Amazon, TCS, Infosys, Wipro, Accenture, Deloitte, EY, KPMG, PwC, Flipkart, Swiggy, Zomato, Paytm, PhonePe, Razorpay, Goldman Sachs, JP Morgan, Reliance, Tata Group, Zoho, Freshworks...
-
-Tier 2 (70+ companies)
-Hexaware, OYO, Unacademy, BYJU'S, Naukri, Shine, ClearTax, Haptik, Yellow.ai, Dream11, MPL, MakeMyTrip, Ixigo...
-
-Tier 3 (Default)
-All other/unknown companies
-
-📊 Dashboard Features
-Filters: AI score, date range, source, keywords
-KPIs: Total jobs, avg AI score, top skill, remote %
-Charts: Daily trend, source distribution, skill demand
-Table: Clickable links, progress bars, sortable
-Export: Download filtered CSV
-🐛 Troubleshooting
-No Telegram Alerts
-✅ Expected! System suppresses Tier 3 companies. Check CSV for all jobs.
-
-All Jobs Suppressed
-✅ Working correctly! No Tier 1/2 jobs found. System logs to CSV.
-
-Dashboard Not Loading
-Check if jobs_dataset.csv exists
-Wait for GitHub Actions to run
-Refresh dashboard
-📈 Performance
-Jobs/Run: 70 average
-Frequency: Every 3 hours (8x/day)
-Deduplication: 1500 job memory
-Tier 1 Alert Rate: ~15-25% of jobs
-Uptime: 99%+
-🔧 Configuration
-Customize Company Tiers
-Edit company_ranker.py:
-
-TIER_1_COMPANIES = {
-    "google", "microsoft", "amazon", ...
-    # Add your preferred companies
-}
-Adjust Scoring Weights
-Edit company_ranker.py:
-
-# Change company importance
-final_rank = 0.5 * hybrid + 0.5 * company  # Equal (50/50)
-# OR
-final_rank = 0.3 * hybrid + 0.7 * company  # Company > Skills
-Change Schedule
-Edit .github/workflows/job.yml:
-
-cron: '0 */3 * * *'  # Every 3 hours
-# OR
-cron: '0 9,17 * * *'  # 9 AM & 5 PM only
-📝 CSV Output
-date,title,source,ai_score,hybrid_score,company_score,final_rank_score,final_decision
-2026-02-13,Data Analyst,Google,0.85,0.89,1.0,0.945,Sent
-2026-02-13,Analyst Intern,Unknown Startup,0.90,0.93,0.4,0.665,Suppressed
-Key: Both logged, but only Tier 1/2 sent to Telegram!
-
-🛠️ Tech Stack
-Python 3.11
-GitHub Actions (automation)
-BeautifulSoup4 (scraping)
-Streamlit (dashboard)
-Plotly (charts)
-Telegram Bot API (alerts)
-🎯 Success Metrics
-Before Upgrade
-❌ All jobs sent to Telegram (spam)
-❌ Unknown startups mixed with top MNCs
-❌ Hard to identify quality opportunities
-After Upgrade
-✅ Only Tier 1 & 2 companies alert Telegram
-✅ Career-quality intelligence only
-✅ Tier 3 logged to CSV for optional review
-✅ Every alert is worth your attention!
-📞 Support
-Issues? Open an issue in this repository
-Questions? Check troubleshooting section
-Improvements? Submit a pull request
-
-⭐ Star This Repository
-If this helped you land a job, give it a star! ⭐
-
-Made with ❤️ for data analysts seeking top-tier opportunities
-
-Last Updated: February 2026
-
-Dashboard: Live Demo
-💡 Key Takeaway
-Your AI Job Agent now functions as a career gatekeeper — only the best opportunities reach you. Every Telegram alert is from a reputable company worth applying to! 🚀
+if __name__ == "__main__":
+    main()
